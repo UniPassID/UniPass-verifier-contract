@@ -18,8 +18,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
 
     receive() external payable {}
 
-    constructor() public {
-        admin = address(msg.sender);
+    constructor(address _admin) public {
+        admin = _admin;
     }
 
     event Verified(address caller, uint256 success);
