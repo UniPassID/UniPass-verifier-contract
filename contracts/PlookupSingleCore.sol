@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: UNLICENSED
+
 pragma solidity 0.8.17;
 
 import "./PlonkCoreLib.sol";
-import "hardhat/console.sol";
 
 /// Plonk verifier
 contract Plonk4SingleVerifierWithAccessToDNext {
@@ -182,7 +183,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.Fr memory tmp_1 = PairingsBn254.new_fr(1);
         PairingsBn254.Fr memory tmp_2 = PairingsBn254.new_fr(domain_size);
         PairingsBn254.Fr memory vanishing_at_z = at.pow(domain_size);
-        PairingsBn254.Fr memory return_zeta_pow_n = PairingsBn254.copy(
+        return_zeta_pow_n = PairingsBn254.copy(
             vanishing_at_z
         );
         vanishing_at_z.sub_assign(one);
@@ -212,7 +213,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             tmp_1.mul_assign(omega);
         }
         // add Ln = (z^n - 1)/(n(w*z - 1))
-        PairingsBn254.Fr memory res_Ln = PairingsBn254.copy(vanishing_at_z);
+        res_Ln = PairingsBn254.copy(vanishing_at_z);
         tmp_1.assign(omega);
         tmp_1.mul_assign(at);
         tmp_1.sub_assign(one);
@@ -268,9 +269,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
     function verify_at_z(
         PairingsBn254.Fr memory zeta_n,
         PartialVerifierState memory state,
-        Proof memory proof,
-        VerificationKey memory vk
-    ) internal view returns (bool) {
+        Proof memory proof
+    ) internal pure returns (bool) {
         /// lhs = t(z) * v(z)
         PairingsBn254.Fr memory lhs = PairingsBn254.copy(zeta_n);
         lhs.sub_assign(PairingsBn254.new_fr(1));
@@ -519,7 +519,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         grand_product_part_at_z.mul_assign(tmp_fr0);
 
         // v*u
-        PairingsBn254.Fr memory out_vu = PairingsBn254.copy(state.u);
+        out_vu = PairingsBn254.copy(state.u);
         out_vu.mul_assign(state.v);
 
         // + v*u
@@ -1058,7 +1058,6 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             lagrange_poly_numbers[i] = i;
         }
 
-        PairingsBn254.Fr memory return_zeta_pow_n;
         (
             state.cached_lagrange_evals,
             state.cached_lagrange_eval_Ln,
@@ -1070,7 +1069,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             state.z
         );
 
-        bool valid = verify_at_z(return_zeta_pow_n, state, proof, vk);
+        bool valid = verify_at_z(return_zeta_pow_n, state, proof);
         if (valid == false) {
             return (false, return_zeta_pow_n);
         }
@@ -1144,8 +1143,8 @@ contract SingleVerifierWithDeserialize is
     uint256 constant SERIALIZED_PROOF_LENGTH = 0;
 
     // first register srshash
-    function srshash_init(uint256 srshash_init) public returns (bool) {
-        srshash = bytes32(srshash_init);
+    function srshash_init(uint256 _srshash_init) public returns (bool) {
+        srshash = bytes32(_srshash_init);
         return true;
     }
 
@@ -1177,12 +1176,10 @@ contract SingleVerifierWithDeserialize is
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
-    ) public returns (bool) {
-        console.log("1024");
+    ) public view returns (bool) {
         bytes32 vkhash = sha256(
             abi.encodePacked(num_inputs, domain_size, vkdata)
         );
-        // console.logBytes32( vkhash );
         assert(vk1024hash == vkhash);
 
         VerificationKey memory vk;
@@ -1248,8 +1245,6 @@ contract SingleVerifierWithDeserialize is
         }
         // return verify(proof, vk);
         res = verify_commitments(return_zeta_pow_n, state, proof, vk);
-        console.log("all finish 1024");
-        console.log(res);
         return res;
     }
 
@@ -1259,11 +1254,10 @@ contract SingleVerifierWithDeserialize is
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
-    ) public returns (bool) {
+    ) public view returns (bool) {
         bytes32 vkhash = sha256(
             abi.encodePacked(num_inputs, domain_size, vkdata)
         );
-        // console.logBytes32( vkhash );
         assert(vk2048hash == vkhash);
 
         VerificationKey memory vk;
@@ -1329,8 +1323,6 @@ contract SingleVerifierWithDeserialize is
         }
         // return verify(proof, vk);
         res = verify_commitments(return_zeta_pow_n, state, proof, vk);
-        console.log("all finish 2048");
-        console.log(res);
         return res;
     }
 

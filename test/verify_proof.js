@@ -14,7 +14,7 @@ describe("plonk contract", function () {
     console.log(`> [INIT] deployer.address = ${deployer.address} ...... `);
 
     UnipassVerifierFactory = await ethers.getContractFactory("UnipassVerifier");
-    UnipassVerifier = await UnipassVerifierFactory.deploy();
+    UnipassVerifier = await UnipassVerifierFactory.deploy(deployer.address);
 
     await UnipassVerifier.deployed();
     console.log(`> [DPLY] Contract deployed, addr=${UnipassVerifier.address}`);
@@ -22,7 +22,7 @@ describe("plonk contract", function () {
   });
 
   it("should verify valid email-header-1024 proof correctly", async function () {
-
+    console.log(`[INFO] begin test 1024`);
     const files1024 = fs.readdirSync("test_data/inputs_1024");
     for (let i = 0; i < files1024.length; i++) {
       let data = fs.readFileSync(path.join("test_data/inputs_1024", files1024[i]), 'utf8');
@@ -40,17 +40,17 @@ describe("plonk contract", function () {
         console.log(`[INFO] Setup setupVKHash ... ok`);
       }
 
-      let chech_tx = await UnipassVerifier.checkPublicInputs1024(
+      let checkRes = await UnipassVerifier.checkPublicInputs1024(
         contractInput.fromLeftIndex,
         contractInput.fromLen,
         contractInput.publicInputs,
       )
 
       // wait the tx being mined
-      let check_rc = await chech_tx.wait(1);
-      console.log(`[Info] Check public input >>> gasUsed: ${check_rc.gasUsed}`);
+      // let check_rc = await chech_tx.wait(1);
+      console.log(`[Info] Check public input >>> result: ${checkRes}`);
 
-      let tx = await UnipassVerifier.verifyV1024(
+      let verifyRes = await UnipassVerifier.verifyV1024(
         contractInput.vkData,
         contractInput.publicInputs,
         contractInput.proof
@@ -58,30 +58,26 @@ describe("plonk contract", function () {
       console.log(`[INFO] Verify ... ok`);
 
       // wait the tx being mined
-      let rc = await tx.wait(1);
+      // let rc = await tx.wait(1);
       // console.log(rc.logs);
-      console.log(`    >>> gasUsed: ${rc.gasUsed}`);
+      console.log(`    >>> result: ${verifyRes}`);
 
       let VerifierABI = ["event Verified(address caller, uint256 success)"];
       let iface = new ethers.utils.Interface(VerifierABI);
 
-      let ecode = -1;
-      if (rc.logs.length >= 1) {
-        let log = iface.parseLog(rc.logs[0]);
-        ecode = log.args["success"];
-      }
-      if (ecode == 1) {
+
+      if (verifyRes) {
         console.log(`[INFO] Verification Succeed! ✅`);
       } else {
         console.log(`[INFO] Verification Failed! Ecode=${ecode} ❌`);
       }
 
-      expect(ecode).to.equal(1);
+      expect(verifyRes).to.equal(true);
     }
   });
 
   it("should verify valid email-header-2048 proof correctly", async function () {
-
+    console.log(`[INFO] begin test 2048`);
     const files2048 = fs.readdirSync("test_data/inputs_2048");
     for (let i = 0; i < files2048.length; i++) {
       let data = fs.readFileSync(path.join("test_data/inputs_2048", files2048[i]), 'utf8');
@@ -100,43 +96,37 @@ describe("plonk contract", function () {
         console.log(`[INFO] Setup setupVKHash ... ok`);
       }
 
-      let chech_tx = await UnipassVerifier.checkPublicInputs2048(
+      let checkRes = await UnipassVerifier.checkPublicInputs2048(
         contractInput.fromLeftIndex,
         contractInput.fromLen,
         contractInput.publicInputs,
       )
 
       // wait the tx being mined
-      let check_rc = await chech_tx.wait(1);
-      console.log(`[Info] Check public input >>> gasUsed: ${check_rc.gasUsed}`);
+      // let check_rc = await chech_tx.wait(1);
+      console.log(`[Info] Check public input >>> result: ${checkRes}`);
 
-      let tx = await UnipassVerifier.verifyV2048(
+      let verifyRes = await UnipassVerifier.verifyV2048(
         contractInput.vkData,
         contractInput.publicInputs,
         contractInput.proof
       );
       console.log(`[INFO] Verify ... ok`);
 
-      // wait the tx being mined
-      let rc = await tx.wait(1);
       // console.log(rc.logs);
-      console.log(`    >>> gasUsed: ${rc.gasUsed}`);
+      console.log(`    >>> result: ${verifyRes}`);
 
       let VerifierABI = ["event Verified(address caller, uint256 success)"];
       let iface = new ethers.utils.Interface(VerifierABI);
 
-      let ecode = -1;
-      if (rc.logs.length >= 1) {
-        let log = iface.parseLog(rc.logs[0]);
-        ecode = log.args["success"];
-      }
-      if (ecode == 1) {
+
+      if (verifyRes) {
         console.log(`[INFO] Verification Succeed! ✅`);
       } else {
         console.log(`[INFO] Verification Failed! Ecode=${ecode} ❌`);
       }
 
-      expect(ecode).to.equal(1);
+      expect(verifyRes).to.equal(true);
     }
 
   });
