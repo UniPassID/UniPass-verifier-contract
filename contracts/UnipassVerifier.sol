@@ -9,8 +9,6 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     // uint256 constant SERIALIZED_PROOF_LENGTH = 0;
 
     address admin;
-    uint128 domain_size_1024;
-    uint128 domain_size_2048;
 
     modifier adminOnly() {
         require(msg.sender == admin, "!_!");
@@ -44,13 +42,11 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             vk1024hash = sha256(
                 abi.encodePacked(num_inputs, domain_size, vkdata)
             );
-            domain_size_1024 = domain_size;
             // console.log("domain_size 1024: %s", domain_size);
         } else if (string_length == 2048) {
             vk2048hash = sha256(
                 abi.encodePacked(num_inputs, domain_size, vkdata)
             );
-            domain_size_2048 = domain_size;
             // console.log("domain_size 2048: %s", domain_size);
         } else {
             return false;
@@ -71,12 +67,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             bytes32
         )
     {
-        require(
-            from_left_index + from_len < 1024 &&
-                from_len >= 5 &&
-                from_len <= 192,
-            "from param error"
-        );
+        require(from_left_index + from_len < 1024, "from param error");
+        require(from_len > 4, "from param error");
+        require(from_len < 193, "from param error");
         require(public_inputs.length == 12, "public inputs error");
 
         bytes32 header_hash = (bytes32)(
@@ -88,8 +81,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
 
         uint256 start_index = from_left_index / 252;
         uint256 header_offset = from_left_index % 252;
-        for (uint256 i = 0; i < from_len; i++) {
-            if (header_offset >= 252) {
+        for (uint256 i = 0; i < from_len; ) {
+            if (header_offset == 252) {
                 start_index++;
                 header_offset = 0;
             }
@@ -109,6 +102,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             );
 
             header_offset++;
+            unchecked {
+                ++i;
+            }
         }
 
         bytes32 header_pub_match_hash = (bytes32)(
@@ -135,12 +131,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             bytes32
         )
     {
-        require(
-            from_left_index + from_len < 2048 &&
-                from_len >= 5 &&
-                from_len <= 192,
-            "from param error"
-        );
+        require(from_left_index + from_len < 2048, "from param error");
+        require(from_len > 4, "from param error");
+        require(from_len < 193, "from param error");
         require(public_inputs.length == 16, "public inputs error");
 
         bytes32 header_hash = (bytes32)(
@@ -152,8 +145,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
 
         uint256 start_index = from_left_index / 252;
         uint256 header_offset = from_left_index % 252;
-        for (uint256 i = 0; i < from_len; i++) {
-            if (header_offset >= 252) {
+        for (uint256 i = 0; i < from_len; ) {
+            if (header_offset == 252) {
                 start_index++;
                 header_offset = 0;
             }
@@ -173,6 +166,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             );
 
             header_offset++;
+            unchecked {
+                ++i;
+            }
         }
 
         bytes32 header_pub_match_hash = (bytes32)(
@@ -187,56 +183,70 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function verifyV1024(
+        uint128 domain_size,
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) public view returns (bool) {
         uint64 num_inputs = uint64(public_inputs.length);
         bytes32 vkhash = sha256(
-            abi.encodePacked(num_inputs, domain_size_1024, vkdata)
+            abi.encodePacked(num_inputs, domain_size, vkdata)
         );
         // console.log("-- [SC] verifyV1024 > start");
         require(vk1024hash == vkhash, "E: wrong vkey");
 
         VerificationKey memory vk;
-        vk.domain_size = domain_size_1024;
+        vk.domain_size = domain_size;
         vk.num_inputs = num_inputs;
 
         vk.omega = PairingsBn254.new_fr(vkdata[0]);
 
         uint256 j = 1;
-        for (uint256 i = 0; i < STATE_WIDTH + 3 + 3; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH + 3 + 3; ) {
             vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
                 vkdata[j],
                 vkdata[j + 1]
             );
             j += 2;
+
+            unchecked {
+                ++i;
+            }
         }
         // console.log("-- [SC] verifyV1024 > selectors checked");
 
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ) {
             vk.permutation_commitments[i] = PairingsBn254.new_g1_checked(
                 vkdata[j],
                 vkdata[j + 1]
             );
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
         // console.log("-- [SC] verifyV1024 > permutations checked");
 
-        for (uint256 i = 0; i < STATE_WIDTH + 1; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH + 1; ) {
             vk.tables_commitments[i] = PairingsBn254.new_g1_checked(
                 vkdata[j],
                 vkdata[j + 1]
             );
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
         // console.log("-- [SC] verifyV1024 > tables checked");
 
         // q_substring0 q_substring_r0 q_pubmatch
-        for (uint256 i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; ) {
             vk.selector_commitments[STATE_WIDTH + 3 + 3 + i] = PairingsBn254
                 .new_g1_checked(vkdata[j], vkdata[j + 1]);
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
         // console.log("-- [SC] verifyV1024 > substr selectors checked");
 
@@ -281,57 +291,70 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function verifyV2048(
+        uint128 domain_size,
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) public view returns (bool) {
         uint64 num_inputs = uint64(public_inputs.length);
         bytes32 vkhash = sha256(
-            abi.encodePacked(num_inputs, domain_size_2048, vkdata)
+            abi.encodePacked(num_inputs, domain_size, vkdata)
         );
         // console.log("-- [SC] verifyV2048 > start");
         require(vk2048hash == vkhash, "E: wrong vkey");
 
         VerificationKey memory vk;
-        vk.domain_size = domain_size_2048;
+        vk.domain_size = domain_size;
         vk.num_inputs = num_inputs;
 
         vk.omega = PairingsBn254.new_fr(vkdata[0]);
 
         uint256 j = 1;
-        for (uint256 i = 0; i < STATE_WIDTH + 3 + 3; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH + 3 + 3; ) {
             vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
                 vkdata[j],
                 vkdata[j + 1]
             );
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
 
         // console.log("-- [SC] verifyV2048 > selectors checked");
 
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ) {
             vk.permutation_commitments[i] = PairingsBn254.new_g1_checked(
                 vkdata[j],
                 vkdata[j + 1]
             );
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
         // console.log("-- [SC] verifyV2048 > permutations checked");
 
-        for (uint256 i = 0; i < STATE_WIDTH + 1; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH + 1; ) {
             vk.tables_commitments[i] = PairingsBn254.new_g1_checked(
                 vkdata[j],
                 vkdata[j + 1]
             );
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
         // console.log("-- [SC] verifyV2048 > tables checked");
 
         // q_substring0 q_substring_r0 q_pubmatch
-        for (uint256 i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; ) {
             vk.selector_commitments[STATE_WIDTH + 3 + 3 + i] = PairingsBn254
                 .new_g1_checked(vkdata[j], vkdata[j + 1]);
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
         // console.log("-- [SC] verifyV2048 > substr selectors checked");
 
@@ -381,19 +404,26 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         uint256[] memory serialized_proof
     ) internal pure returns (Proof memory proof) {
         // require(serialized_proof.length == SERIALIZED_PROOF_LENGTH);
-        proof.input_values = new uint256[](public_inputs.length);
-        for (uint256 i = 0; i < public_inputs.length; i++) {
+        uint256 inputs_len = public_inputs.length;
+        proof.input_values = new uint256[](inputs_len);
+        for (uint256 i = 0; i < inputs_len; ) {
             proof.input_values[i] = public_inputs[i];
+            unchecked {
+                ++i;
+            }
         }
 
         //witness 0123...
         uint256 j = 0;
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ) {
             proof.wire_commitments[i] = PairingsBn254.new_g1_checked(
                 serialized_proof[j],
                 serialized_proof[j + 1]
             );
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
         //s
         proof.sorted_lookup_commitment = PairingsBn254.new_g1_checked(
@@ -420,12 +450,15 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         );
         j += 2;
         //t123...
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ) {
             proof.quotient_poly_commitments[i] = PairingsBn254.new_g1_checked(
                 serialized_proof[j],
                 serialized_proof[j + 1]
             );
             j += 2;
+            unchecked {
+                ++i;
+            }
         }
 
         //t(z)
@@ -439,25 +472,34 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         );
         j += 1;
         //`w_0(z)`, `w_1(z)`, `w_2(z)`...
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ) {
             proof.wire_values_at_z[i] = PairingsBn254.new_fr(
                 serialized_proof[j]
             );
             j += 1;
+            unchecked {
+                ++i;
+            }
         }
         //`sigma_0(z)`, `sigma_1(z)`, `sigma_2(z)`...
-        for (uint256 i = 0; i < STATE_WIDTH - 1; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH - 1; ) {
             proof.permutation_polynomials_at_z[i] = PairingsBn254.new_fr(
                 serialized_proof[j]
             );
             j += 1;
+            unchecked {
+                ++i;
+            }
         }
         //`q_arith(z)`, `q_table(z)`, `q_lookup(z)`
-        for (uint256 i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; ) {
             proof.some_selectors_at_z[i] = PairingsBn254.new_fr(
                 serialized_proof[j]
             );
             j += 1;
+            unchecked {
+                ++i;
+            }
         }
         // `table(z)`
         proof.table_at_z = PairingsBn254.new_fr(serialized_proof[j]);

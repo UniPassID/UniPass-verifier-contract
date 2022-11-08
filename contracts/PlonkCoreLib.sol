@@ -4,12 +4,12 @@ pragma solidity 0.8.17;
 
 /// Library for Bn254 curve operations.
 library PairingsBn254 {
-    uint256 constant q_mod =
+    uint256 constant private q_mod =
         21888242871839275222246405745257275088696311157297823662689037894645226208583;
-    uint256 constant r_mod =
+    uint256 constant private r_mod =
         21888242871839275222246405745257275088548364400416034343698204186575808495617;
     /// b of $y^2 = x^3 + b$
-    uint256 constant bn254_b_coeff = 3;
+    uint256 constant private bn254_b_coeff = 3;
 
     /// G1 point, whose X, Y coordinates lie in filed Fq.
     struct G1Point {
@@ -350,12 +350,12 @@ library PairingsBn254 {
 /// Library for Fiat-Shamir heuristic
 library TranscriptLibrary {
     // flip                    0xe000000000000000000000000000000000000000000000000000000000000000;
-    uint256 constant FR_MASK =
+    uint256 constant private FR_MASK =
         0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
-    uint32 constant DST_0 = 0;
-    uint32 constant DST_1 = 1;
-    uint32 constant DST_CHALLENGE = 2;
+    uint32 constant private DST_0 = 0;
+    uint32 constant private DST_1 = 1;
+    uint32 constant private DST_CHALLENGE = 2;
 
     struct Transcript {
         bytes32 state_0;

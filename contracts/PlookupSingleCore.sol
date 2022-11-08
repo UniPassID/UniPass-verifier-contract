@@ -183,9 +183,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.Fr memory tmp_1 = PairingsBn254.new_fr(1);
         PairingsBn254.Fr memory tmp_2 = PairingsBn254.new_fr(domain_size);
         PairingsBn254.Fr memory vanishing_at_z = at.pow(domain_size);
-        return_zeta_pow_n = PairingsBn254.copy(
-            vanishing_at_z
-        );
+        return_zeta_pow_n = PairingsBn254.copy(vanishing_at_z);
         vanishing_at_z.sub_assign(one);
 
         // we can not have random point z be in domain
@@ -197,11 +195,13 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             poly_nums.length + 1
         ); //+1 for Ln
 
+        uint256 dens_len = dens.length;
         /// compute numerators `nums` and denumerators `dens`, both of `poly_nums.length`
         // numerators in a form omega^i * (z^n - 1)
         // denoms in a form (z - omega^i) * N
         // tmp_1 = omega.pow(poly_nums[0]); // power of omega
-        for (uint256 i = 0; i < poly_nums.length; i++) {
+        uint256 poly_nums_len = poly_nums.length;
+        for (uint256 i = 0; i < poly_nums_len; i++) {
             //  = omega.pow(poly_nums[i]); // power of omega
             nums[i].assign(vanishing_at_z);
             nums[i].mul_assign(tmp_1);
@@ -218,25 +218,25 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_1.mul_assign(at);
         tmp_1.sub_assign(one);
         tmp_1.mul_assign(tmp_2);
-        dens[dens.length - 1].assign(tmp_1); // Ln
+        dens[dens_len - 1].assign(tmp_1); // Ln
 
         /// batch inversion of `dens`
         PairingsBn254.Fr[] memory partial_products = new PairingsBn254.Fr[](
-            dens.length
+            dens_len
         ); // Ln
         partial_products[0].assign(PairingsBn254.new_fr(1));
-        for (uint256 i = 1; i < dens.length; i++) {
+        for (uint256 i = 1; i < dens_len; i++) {
             partial_products[i].assign(partial_products[i - 1]);
             partial_products[i].mul_assign(dens[i - 1]);
         }
 
         tmp_2.assign(partial_products[partial_products.length - 1]);
-        tmp_2.mul_assign(dens[dens.length - 1]);
+        tmp_2.mul_assign(dens[dens_len - 1]);
 
         tmp_2 = tmp_2.inverse(); // tmp_2 contains a^-1 * b^-1 (with! the last one)
 
         PairingsBn254.Fr memory tmp3 = PairingsBn254.new_fr(0);
-        for (uint256 i = dens.length - 1; i < dens.length; i--) {
+        for (uint256 i = dens_len - 1; i < dens_len; i--) {
             tmp3.assign(dens[i]);
             dens[i].assign(tmp_2); // all inversed
             dens[i].mul_assign(partial_products[i]); // clear lowest terms
@@ -245,12 +245,13 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         }
 
         /// `nums[i] / dens[i]`
-        for (uint256 i = 0; i < nums.length; i++) {
+        uint256 nums_len = nums.length;
+        for (uint256 i = 0; i < nums_len; i++) {
             nums[i].mul_assign(dens[i]);
         }
 
         // Ln
-        res_Ln.mul_assign(dens[dens.length - 1]);
+        res_Ln.mul_assign(dens[dens_len - 1]);
         // return nums;
         return (nums, res_Ln, return_zeta_pow_n);
     }
@@ -305,7 +306,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         // public inputs
         PairingsBn254.Fr memory inputs_term = PairingsBn254.new_fr(0);
         PairingsBn254.Fr memory tmp = PairingsBn254.new_fr(0);
-        for (uint256 i = 0; i < proof.input_values.length; i++) {
+        uint256 inputs_len = proof.input_values.length;
+        for (uint256 i = 0; i < inputs_len; i++) {
             tmp.assign(state.cached_lagrange_evals[i]);
             tmp.mul_assign(PairingsBn254.new_fr(proof.input_values[i]));
             inputs_term.add_assign(tmp);
@@ -1054,7 +1056,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         uint256[] memory lagrange_poly_numbers = new uint256[](
             vk.num_inputs + tmp
         );
-        for (uint256 i = 0; i < lagrange_poly_numbers.length; i++) {
+        uint256 lagrange_poly_len = lagrange_poly_numbers.length;
+        for (uint256 i = 0; i < lagrange_poly_len; i++) {
             lagrange_poly_numbers[i] = i;
         }
 
@@ -1140,7 +1143,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 contract SingleVerifierWithDeserialize is
     Plonk4SingleVerifierWithAccessToDNext
 {
-    uint256 constant SERIALIZED_PROOF_LENGTH = 0;
+    uint256 private constant SERIALIZED_PROOF_LENGTH = 0;
 
     // first register srshash
     function srshash_init(uint256 _srshash_init) public returns (bool) {
@@ -1330,9 +1333,10 @@ contract SingleVerifierWithDeserialize is
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) internal pure returns (Proof memory proof) {
+        uint256 inputs_len = public_inputs.length;
         // require(serialized_proof.length == SERIALIZED_PROOF_LENGTH);
-        proof.input_values = new uint256[](public_inputs.length);
-        for (uint256 i = 0; i < public_inputs.length; i++) {
+        proof.input_values = new uint256[](inputs_len);
+        for (uint256 i = 0; i < inputs_len; i++) {
             proof.input_values[i] = public_inputs[i];
         }
 

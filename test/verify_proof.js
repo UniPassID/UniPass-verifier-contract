@@ -43,6 +43,7 @@ describe("plonk contract", function () {
       let testTx = await ZkTest.testV1024(
         contractInput.fromLeftIndex,
         contractInput.fromLen,
+        contractInput.domainSize,
         contractInput.vkData,
         contractInput.publicInputs,
         contractInput.proof
@@ -96,6 +97,7 @@ describe("plonk contract", function () {
       let testTx = await ZkTest.testV2048(
         contractInput.fromLeftIndex,
         contractInput.fromLen,
+        contractInput.domainSize,
         contractInput.vkData,
         contractInput.publicInputs,
         contractInput.proof

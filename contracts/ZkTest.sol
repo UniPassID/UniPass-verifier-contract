@@ -12,6 +12,7 @@ contract ZkTest is UnipassVerifier {
     function testV1024(
         uint32 from_left_index,
         uint32 from_len,
+        uint128 domain_size,
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
@@ -29,7 +30,12 @@ contract ZkTest is UnipassVerifier {
             bytes32 from_hash,
             bytes32 header_pub_match_hash
         ) = checkPublicInputs1024(from_left_index, from_len, public_inputs);
-        bool success = verifyV1024(vkdata, public_inputs, serialized_proof);
+        bool success = verifyV1024(
+            domain_size,
+            vkdata,
+            public_inputs,
+            serialized_proof
+        );
         if (success) {
             emit Verified(header_hash, 1);
         } else {
@@ -42,6 +48,7 @@ contract ZkTest is UnipassVerifier {
     function testV2048(
         uint32 from_left_index,
         uint32 from_len,
+        uint128 domain_size,
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
@@ -59,7 +66,12 @@ contract ZkTest is UnipassVerifier {
             bytes32 from_hash,
             bytes32 header_pub_match_hash
         ) = checkPublicInputs2048(from_left_index, from_len, public_inputs);
-        bool success = verifyV2048(vkdata, public_inputs, serialized_proof);
+        bool success = verifyV2048(
+            domain_size,
+            vkdata,
+            public_inputs,
+            serialized_proof
+        );
 
         if (success) {
             emit Verified(header_hash, 1);
