@@ -13,11 +13,11 @@ describe("plonk contract", function () {
     [deployer] = await ethers.getSigners();
     console.log(`> [INIT] deployer.address = ${deployer.address} ...... `);
 
-    UnipassVerifierFactory = await ethers.getContractFactory("UnipassVerifier");
-    UnipassVerifier = await UnipassVerifierFactory.deploy(deployer.address);
+    ZkTestFactory = await ethers.getContractFactory("ZkTest");
+    ZkTest = await ZkTestFactory.deploy(deployer.address);
 
-    await UnipassVerifier.deployed();
-    console.log(`> [DPLY] Contract deployed, addr=${UnipassVerifier.address}`);
+    await ZkTest.deployed();
+    console.log(`> [DPLY] Contract deployed, addr=${ZkTest.address}`);
 
   });
 
@@ -28,10 +28,10 @@ describe("plonk contract", function () {
       let data = fs.readFileSync(path.join("test_data/inputs_1024", files1024[i]), 'utf8');
       let contractInput = JSON.parse(data);
       if (i == 0) {
-        await UnipassVerifier.setupSRSHash(contractInput.srsHash);
+        await ZkTest.setupSRSHash(contractInput.srsHash);
         console.log(`[INFO] Setup SRS ... ok`);
 
-        await UnipassVerifier.setupVKHash(
+        await ZkTest.setupVKHash(
           1024,
           contractInput.publicInputsNum,
           contractInput.domainSize,
@@ -40,39 +40,36 @@ describe("plonk contract", function () {
         console.log(`[INFO] Setup setupVKHash ... ok`);
       }
 
-      let checkRes = await UnipassVerifier.checkPublicInputs1024(
+      let testTx = await ZkTest.testV1024(
         contractInput.fromLeftIndex,
         contractInput.fromLen,
-        contractInput.publicInputs,
-      )
-
-      // wait the tx being mined
-      // let check_rc = await chech_tx.wait(1);
-      console.log(`[Info] Check public input >>> result: ${checkRes}`);
-
-      let verifyRes = await UnipassVerifier.verifyV1024(
         contractInput.vkData,
         contractInput.publicInputs,
         contractInput.proof
-      );
-      console.log(`[INFO] Verify ... ok`);
+      )
 
       // wait the tx being mined
-      // let rc = await tx.wait(1);
-      // console.log(rc.logs);
-      console.log(`    >>> result: ${verifyRes}`);
+      let testReceipt = await testTx.wait(1);
 
-      let VerifierABI = ["event Verified(address caller, uint256 success)"];
+      console.log(`[Info] Check Email Use Zk >>> gasUsed: ${testReceipt.gasUsed}`);
+
+      let VerifierABI = ["event Verified(bytes32 header_hash, uint256 success)"];
       let iface = new ethers.utils.Interface(VerifierABI);
 
-
-      if (verifyRes) {
-        console.log(`[INFO] Verification Succeed! ✅`);
+      let ecode = -1;
+      let header_hash = "";
+      if (testReceipt.logs.length >= 1) {
+        let log = iface.parseLog(testReceipt.logs[0]);
+        ecode = log.args["success"];
+        header_hash = log.args["header_hash"];
+      }
+      if (ecode == 1) {
+        console.log(`[INFO] [${header_hash}] Verification Succeed! ✅`);
       } else {
         console.log(`[INFO] Verification Failed! Ecode=${ecode} ❌`);
       }
 
-      expect(verifyRes).to.equal(true);
+      expect(ecode).to.equal(1);
     }
   });
 
@@ -84,10 +81,10 @@ describe("plonk contract", function () {
       let contractInput = JSON.parse(data);
       if (i == 0) {
 
-        await UnipassVerifier.setupSRSHash(contractInput.srsHash);
+        await ZkTest.setupSRSHash(contractInput.srsHash);
         console.log(`[INFO] Setup SRS ... ok`);
 
-        await UnipassVerifier.setupVKHash(
+        await ZkTest.setupVKHash(
           2048,
           contractInput.publicInputsNum,
           contractInput.domainSize,
@@ -96,37 +93,36 @@ describe("plonk contract", function () {
         console.log(`[INFO] Setup setupVKHash ... ok`);
       }
 
-      let checkRes = await UnipassVerifier.checkPublicInputs2048(
+      let testTx = await ZkTest.testV2048(
         contractInput.fromLeftIndex,
         contractInput.fromLen,
-        contractInput.publicInputs,
-      )
-
-      // wait the tx being mined
-      // let check_rc = await chech_tx.wait(1);
-      console.log(`[Info] Check public input >>> result: ${checkRes}`);
-
-      let verifyRes = await UnipassVerifier.verifyV2048(
         contractInput.vkData,
         contractInput.publicInputs,
         contractInput.proof
-      );
-      console.log(`[INFO] Verify ... ok`);
+      )
 
-      // console.log(rc.logs);
-      console.log(`    >>> result: ${verifyRes}`);
+      // wait the tx being mined
+      let testReceipt = await testTx.wait(1);
 
-      let VerifierABI = ["event Verified(address caller, uint256 success)"];
+      console.log(`[Info] Check Email Use Zk >>> gasUsed: ${testReceipt.gasUsed}`);
+
+      let VerifierABI = ["event Verified(bytes32 header_hash, uint256 success)"];
       let iface = new ethers.utils.Interface(VerifierABI);
 
-
-      if (verifyRes) {
-        console.log(`[INFO] Verification Succeed! ✅`);
+      let ecode = -1;
+      let header_hash = "";
+      if (testReceipt.logs.length >= 1) {
+        let log = iface.parseLog(testReceipt.logs[0]);
+        ecode = log.args["success"];
+        header_hash = log.args["header_hash"];
+      }
+      if (ecode == 1) {
+        console.log(`[INFO] [${header_hash}] Verification Succeed! ✅`);
       } else {
         console.log(`[INFO] Verification Failed! Ecode=${ecode} ❌`);
       }
 
-      expect(verifyRes).to.equal(true);
+      expect(ecode).to.equal(1);
     }
 
   });
