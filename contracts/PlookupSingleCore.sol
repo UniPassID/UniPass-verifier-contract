@@ -54,9 +54,9 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.G2Point g2_x;
     }
 
-    bytes32 vk1024hash;
-    bytes32 vk2048hash;
-    bytes32 srshash;
+    bytes32 public vk1024hash;
+    bytes32 public vk2048hash;
+    bytes32 public srshash;
 
     struct Proof {
         /// input values, Fr array of length `verification_key.num_inputs`
