@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 
 import "./PlonkCoreLib.sol";
 import "./PlookupSingleCore.sol";
+import "hardhat/console.sol";
 
 contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     // uint256 constant SERIALIZED_PROOF_LENGTH = 0;
@@ -310,7 +311,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         vk.omega = PairingsBn254.new_fr(vkdata[0]);
 
         uint256 j = 1;
-        for (uint256 i = 0; i < STATE_WIDTH + 3 + 3; ) {
+        for (uint256 i = 0; i < STATE_WIDTH + 2 + 2; ) {
             vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
                 vkdata[j],
                 vkdata[j + 1]
@@ -347,9 +348,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         }
         // console.log("-- [SC] verifyV2048 > tables checked");
 
-        // q_substring0 q_substring_r0 q_pubmatch
-        for (uint256 i = 0; i < 3; ) {
-            vk.selector_commitments[STATE_WIDTH + 3 + 3 + i] = PairingsBn254
+        // q_substring q_substring_r
+        for (uint256 i = 0; i < 2; ) {
+            vk.selector_commitments[STATE_WIDTH + 2 + 2 + i] = PairingsBn254
                 .new_g1_checked(vkdata[j], vkdata[j + 1]);
             j += 2;
             unchecked {
@@ -389,11 +390,11 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         }
 
         bool success = verify_commitments(return_zeta_pow_n, state, proof, vk);
-        // if (success) {
-        //     // console.log("-- [SC] verifyV2048 > Verified");
-        // } else {
-        //     // console.log("-- [SC] verifyV2048 > Failed");
-        // }
+        if (success) {
+            console.log("-- [SC] verifyV2048 > Verified");
+        } else {
+            console.log("-- [SC] verifyV2048 > Failed");
+        }
         // console.log("-- [SC] verifyV2048 > res =", res);
 
         return success;
@@ -491,18 +492,20 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 ++i;
             }
         }
-        //`q_arith(z)`, `q_table(z)`, `q_lookup(z)`
-        for (uint256 i = 0; i < 3; ) {
-            proof.some_selectors_at_z[i] = PairingsBn254.new_fr(
-                serialized_proof[j]
-            );
-            j += 1;
-            unchecked {
-                ++i;
-            }
-        }
+        // `q_table(z)`
+        proof.q_table_at_z = PairingsBn254.new_fr(
+            serialized_proof[j]
+        );
+        j += 1;
+        // `q_lookup(z)`
+        proof.q_lookup_at_z = PairingsBn254.new_fr(
+            serialized_proof[j]
+        );
+        j += 1;
         // `table(z)`
-        proof.table_at_z = PairingsBn254.new_fr(serialized_proof[j]);
+        proof.table_at_z = PairingsBn254.new_fr(
+            serialized_proof[j]
+        );
         j += 1;
 
         //w0(zw)
@@ -526,14 +529,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         //table(zw)
         proof.table_at_z_omega = PairingsBn254.new_fr(serialized_proof[j]);
         j += 1;
-        //w1(zw)
-        proof.wire1_at_z_omega = PairingsBn254.new_fr(serialized_proof[j]);
-        j += 1;
         //w2(zw)
         proof.wire2_at_z_omega = PairingsBn254.new_fr(serialized_proof[j]);
-        j += 1;
-        //w3(zw)
-        proof.wire3_at_z_omega = PairingsBn254.new_fr(serialized_proof[j]);
         j += 1;
         //z_substring(zw)
         proof.z_substring_at_z_omega = PairingsBn254.new_fr(
