@@ -25,8 +25,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
      *                - zlookup[wi]*gamma*(s[i] + beta*s[wi] + (beta+1)*gamma)
      *                   + alpha*L1[X]*(zlookup[i] - 1) + alpha^2 *Ln[X]*(zlookup[i] - 1) )
      * + alpha^6 * ( z_substring[wi] - z_substring[i] + q_substring0[i]*(w2[i]*w3[i] -w0[i]*w1[i])
-     *                + alpha * q_substring_r0[i]*( w1[wi]*(w4[i]*w0[i] +w1[wi] -w1[i]) -w0[wi] )
-     *                + alpha^2 * q_substring_r0[i]*( w3[wi]*(w4[i]*w2[i] +w3[wi] -w3[i]) -w2[wi] )
+     *                + alpha * q_substring_r0[i]*( w1[wi]*w4[i]*(w0[i] +w1[wi] -w1[i]) -w0[wi] )
+     *                + alpha^2 * q_substring_r0[i]*( w3[wi]*w4[i]*(w2[i] +w3[wi] -w3[i]) -w2[wi] )
      *                + alpha^3 * z_substring[i] * L1[X]
      *                + alpha^4 * q_substring_r0[i]* w1[wi]*(w1[wi] - 1)
      *                + alpha^5 * q_substring_r0[i]* w3[wi]*(w3[wi] - 1)
@@ -409,8 +409,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
      *       + alpha^6 * (w2[z]*w3[z] -w0[z]*w1[z]) *[q_substring0]
      *       + alpha^6 * (  
-     *          + alpha * ( w1[zw]*(w4[z]*w0[z] +w1[zw] -w1[z]) -w0[zw] ) 
-     *          + alpha^2 * ( w3[zw]*(w4[z]*w2[z] +w3[zw] -w3[z]) -w2[zw] )  
+     *          + alpha * ( w1[zw]*w4[z]*(w0[z] +w1[zw] -w1[z]) -w0[zw] ) 
+     *          + alpha^2 * ( w3[zw]*w4[z]*(w2[z] +w3[zw] -w3[z]) -w2[zw] )  
      *          + alpha^4 * w1[zw]*(w1[zw] - 1)     
      *          + alpha^5 * w3[zw]*(w3[zw] - 1)     
      *         ) *[q_substring_r0]
@@ -633,24 +633,25 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         // first [q_substring_r0]
         // comb alpha
         tmp_fr.assign(state.alpha);
-        // w4[z]*w0[z] (reuse var)
-        grand_product_part_at_z.assign(proof.wire_values_at_z[4]);
-        grand_product_part_at_z.mul_assign(proof.wire_values_at_z[0]);
+        // w0[z] (reuse var)
+        // grand_product_part_at_z.assign(proof.wire_values_at_z[4]);
+        grand_product_part_at_z.assign(proof.wire_values_at_z[0]);
         // +w1[zw] -w1[z]
         grand_product_part_at_z.add_assign(proof.wire1_at_z_omega);
         grand_product_part_at_z.sub_assign(proof.wire_values_at_z[1]);
-        // w1[zw]*(w4[z]*w0[z] +w1[zw] -w1[z]) -w0[zw]
+        // w1[zw]*w4[z]*(w0[z] +w1[zw] -w1[z]) -w0[zw]
+        grand_product_part_at_z.mul_assign(proof.wire_values_at_z[4]);
         grand_product_part_at_z.mul_assign(proof.wire1_at_z_omega);
         grand_product_part_at_z.sub_assign(proof.wire0_at_z_omega);
         // *alpha
         grand_product_part_at_z.mul_assign(tmp_fr);
         tmp_fr.mul_assign(state.alpha);
 
-        // w3[zw]*(w4[z]*w2[z] +w3[zw] -w3[z]) -w2[zw] (reuse var)
-        tmp_fr1.assign(proof.wire_values_at_z[4]);
-        tmp_fr1.mul_assign(proof.wire_values_at_z[2]);
+        // w3[zw]*w4[z]*(w2[z] +w3[zw] -w3[z]) -w2[zw] (reuse var)
+        tmp_fr1.assign(proof.wire_values_at_z[2]);
         tmp_fr1.add_assign(proof.wire3_at_z_omega);
         tmp_fr1.sub_assign(proof.wire_values_at_z[3]);
+        tmp_fr1.mul_assign(proof.wire_values_at_z[4]);
         tmp_fr1.mul_assign(proof.wire3_at_z_omega);
         tmp_fr1.sub_assign(proof.wire2_at_z_omega);
         // *alpha2
