@@ -51,6 +51,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
     bytes32 vk1024hash;
     bytes32 vk2048hash;
+    bytes32 vk2048trihash;
     bytes32 srshash;
 
     struct Proof {

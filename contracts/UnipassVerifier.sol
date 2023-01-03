@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 
 import "./PlonkCoreLib.sol";
 import "./PlookupSingleCore.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     // uint256 constant SERIALIZED_PROOF_LENGTH = 0;
@@ -34,21 +34,25 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
 
     // then register vkdata
     function setupVKHash(
-        uint64 string_length,
+        uint64 circuit_type,
         uint64 num_inputs,
         uint128 domain_size,
         uint256[] memory vkdata
     ) public adminOnly returns (bool) {
-        if (string_length == 1024) {
+        if (circuit_type == 1024) {
             vk1024hash = sha256(
                 abi.encodePacked(num_inputs, domain_size, vkdata)
             );
             // console.log("domain_size 1024: %s", domain_size);
-        } else if (string_length == 2048) {
+        } else if (circuit_type == 2048) {
             vk2048hash = sha256(
                 abi.encodePacked(num_inputs, domain_size, vkdata)
             );
             // console.log("domain_size 2048: %s", domain_size);
+        } else if (circuit_type == 3) {
+            vk2048trihash = sha256(
+                abi.encodePacked(num_inputs, domain_size, vkdata)
+            );
         } else {
             return false;
         }
@@ -390,11 +394,120 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         }
 
         bool success = verify_commitments(return_zeta_pow_n, state, proof, vk);
-        if (success) {
-            console.log("-- [SC] verifyV2048 > Verified");
-        } else {
-            console.log("-- [SC] verifyV2048 > Failed");
+        // if (success) {
+        //     console.log("-- [SC] verifyV2048 > Verified");
+        // } else {
+        //     console.log("-- [SC] verifyV2048 > Failed");
+        // }
+        // console.log("-- [SC] verifyV2048 > res =", res);
+
+        return success;
+    }
+
+    function verifyV2048tri(
+        uint128 domain_size,
+        uint256[] memory vkdata,
+        uint256[] memory public_inputs,
+        uint256[] memory serialized_proof
+    ) public view returns (bool) {
+        uint64 num_inputs = uint64(public_inputs.length);
+        bytes32 vkhash = sha256(
+            abi.encodePacked(num_inputs, domain_size, vkdata)
+        );
+        // console.log("-- [SC] verifyV2048 > start");
+        require(vk2048trihash == vkhash, "E: wrong vkey");
+
+        VerificationKey memory vk;
+        vk.domain_size = domain_size;
+        vk.num_inputs = num_inputs;
+
+        vk.omega = PairingsBn254.new_fr(vkdata[0]);
+
+        uint256 j = 1;
+        for (uint256 i = 0; i < STATE_WIDTH + 2 + 2; ) {
+            vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
+                vkdata[j],
+                vkdata[j + 1]
+            );
+            j += 2;
+            unchecked {
+                ++i;
+            }
         }
+
+        // console.log("-- [SC] verifyV2048 > selectors checked");
+
+        for (uint256 i = 0; i < STATE_WIDTH; ) {
+            vk.permutation_commitments[i] = PairingsBn254.new_g1_checked(
+                vkdata[j],
+                vkdata[j + 1]
+            );
+            j += 2;
+            unchecked {
+                ++i;
+            }
+        }
+        // console.log("-- [SC] verifyV2048 > permutations checked");
+
+        for (uint256 i = 0; i < STATE_WIDTH + 1; ) {
+            vk.tables_commitments[i] = PairingsBn254.new_g1_checked(
+                vkdata[j],
+                vkdata[j + 1]
+            );
+            j += 2;
+            unchecked {
+                ++i;
+            }
+        }
+        // console.log("-- [SC] verifyV2048 > tables checked");
+
+        // q_substring q_substring_r
+        for (uint256 i = 0; i < 2; ) {
+            vk.selector_commitments[STATE_WIDTH + 2 + 2 + i] = PairingsBn254
+                .new_g1_checked(vkdata[j], vkdata[j + 1]);
+            j += 2;
+            unchecked {
+                ++i;
+            }
+        }
+        // console.log("-- [SC] verifyV2048 > substr selectors checked");
+
+        uint256[2] memory tmpx;
+        uint256[2] memory tmpy;
+
+        tmpx[1] = vkdata[j];
+        j += 1;
+        tmpx[0] = vkdata[j];
+        j += 1;
+        tmpy[1] = vkdata[j];
+        j += 1;
+        tmpy[0] = vkdata[j];
+        j += 1;
+        vk.g2_x = PairingsBn254.new_g2(tmpx, tmpy);
+
+        Proof memory proof = deserialize_proof(public_inputs, serialized_proof);
+
+        // console.log("-- [SC] verifyV2048 > proof deserialized");
+
+        PartialVerifierState memory state;
+
+        (bool res, PairingsBn254.Fr memory return_zeta_pow_n) = verify_initial(
+            state,
+            proof,
+            vk,
+            vkhash
+        );
+        if (res == false) {
+            // console.log("-- [SC] verifyV2048 > initialized failed");
+            return false;
+        }
+
+        bool success = verify_commitments(return_zeta_pow_n, state, proof, vk);
+        // if (success) {
+        //     console.log("-- [SC] verifyV2048 > Verified");
+        // } else {
+        //     console.log("-- [SC] verifyV2048 > Failed");
+        // }
         // console.log("-- [SC] verifyV2048 > res =", res);
 
         return success;

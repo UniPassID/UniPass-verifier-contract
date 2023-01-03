@@ -26,6 +26,37 @@ contract ZkTest is UnipassVerifier {
             public_inputs,
             serialized_proof
         );
+        if (success) {
+            emit Verified("1", 1);
+        } else {
+            emit Verified("1001", 1001);
+        }
+
+        return (success);
+    }
+
+    function testNew2048tri(
+        uint128 domain_size,
+        uint256[] memory vkdata,
+        uint256[] memory public_inputs,
+        uint256[] memory serialized_proof
+    )
+        public
+        returns (
+            bool
+        )
+    {
+        bool success = verifyV2048tri(
+            domain_size,
+            vkdata,
+            public_inputs,
+            serialized_proof
+        );
+        if (success) {
+            emit Verified("1", 1);
+        } else {
+            emit Verified("1001", 1001);
+        }
 
         return (success);
     }
