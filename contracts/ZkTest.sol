@@ -9,6 +9,32 @@ contract ZkTest is UnipassVerifier {
 
     constructor(address _admin) UnipassVerifier(_admin) {}
 
+    function testNew1024(
+        uint128 domain_size,
+        uint256[] memory vkdata,
+        uint256[] memory public_inputs,
+        uint256[] memory serialized_proof
+    )
+        public
+        returns (
+            bool
+        )
+    {
+        bool success = verifyV1024(
+            domain_size,
+            vkdata,
+            public_inputs,
+            serialized_proof
+        );
+        if (success) {
+            emit Verified("1", 1);
+        } else {
+            emit Verified("1001", 1001);
+        }
+
+        return (success);
+    }
+
     function testNew2048(
         uint128 domain_size,
         uint256[] memory vkdata,

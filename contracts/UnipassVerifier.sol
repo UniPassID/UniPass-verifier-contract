@@ -207,18 +207,18 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         vk.omega = PairingsBn254.new_fr(vkdata[0]);
 
         uint256 j = 1;
-        for (uint256 i = 0; i < STATE_WIDTH + 3 + 3; ) {
+        for (uint256 i = 0; i < STATE_WIDTH + 2 + 2; ) {
             vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
                 vkdata[j],
                 vkdata[j + 1]
             );
             j += 2;
-
             unchecked {
                 ++i;
             }
         }
-        // console.log("-- [SC] verifyV1024 > selectors checked");
+
+        // console.log("-- [SC] verifyV2048 > selectors checked");
 
         for (uint256 i = 0; i < STATE_WIDTH; ) {
             vk.permutation_commitments[i] = PairingsBn254.new_g1_checked(
@@ -230,7 +230,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 ++i;
             }
         }
-        // console.log("-- [SC] verifyV1024 > permutations checked");
+        // console.log("-- [SC] verifyV2048 > permutations checked");
 
         for (uint256 i = 0; i < STATE_WIDTH + 1; ) {
             vk.tables_commitments[i] = PairingsBn254.new_g1_checked(
@@ -242,18 +242,18 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 ++i;
             }
         }
-        // console.log("-- [SC] verifyV1024 > tables checked");
+        // console.log("-- [SC] verifyV2048 > tables checked");
 
-        // q_substring0 q_substring_r0 q_pubmatch
-        for (uint256 i = 0; i < 3; ) {
-            vk.selector_commitments[STATE_WIDTH + 3 + 3 + i] = PairingsBn254
+        // q_substring q_substring_r
+        for (uint256 i = 0; i < 2; ) {
+            vk.selector_commitments[STATE_WIDTH + 2 + 2 + i] = PairingsBn254
                 .new_g1_checked(vkdata[j], vkdata[j + 1]);
             j += 2;
             unchecked {
                 ++i;
             }
         }
-        // console.log("-- [SC] verifyV1024 > substr selectors checked");
+        // console.log("-- [SC] verifyV2048 > substr selectors checked");
 
         uint256[2] memory tmpx;
         uint256[2] memory tmpy;
@@ -269,7 +269,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         vk.g2_x = PairingsBn254.new_g2(tmpx, tmpy);
 
         Proof memory proof = deserialize_proof(public_inputs, serialized_proof);
-        // console.log("-- [SC] verifyV1024 > proof deserialized");
+
+        // console.log("-- [SC] verifyV2048 > proof deserialized");
 
         PartialVerifierState memory state;
 
@@ -280,7 +281,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             vkhash
         );
         if (res == false) {
-            // console.log("-- [SC] verifyV1024 > initialized failed");
+            // console.log("-- [SC] verifyV2048 > initialized failed");
             return false;
         }
 
