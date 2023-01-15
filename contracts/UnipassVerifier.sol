@@ -4,12 +4,13 @@ pragma solidity ^0.8.0;
 
 import "./PlonkCoreLib.sol";
 import "./PlookupSingleCore.sol";
+
 // import "hardhat/console.sol";
 
 contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     // uint256 constant SERIALIZED_PROOF_LENGTH = 0;
 
-    address admin;
+    address public admin;
 
     modifier adminOnly() {
         require(msg.sender == admin, "!_!");
@@ -20,6 +21,10 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
 
     constructor(address _admin) {
         admin = _admin;
+    }
+
+    function setAdmin(address _newAdmin) external adminOnly {
+        admin = _newAdmin;
     }
 
     // first register srshash
@@ -59,132 +64,240 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         return true;
     }
 
+    function setBit(bytes1 a, uint8 n) public pure returns (bytes1) {
+        return a | bytes1(uint8(2**(7 - n)));
+    }
+
+    function bitLocation(
+        uint32 from_left_index,
+        uint32 from_len,
+        uint32 maxLen
+    ) public pure returns (bytes memory, bytes memory) {
+        bytes memory bit_location_a = new bytes(maxLen / 8);
+        bytes memory bit_location_b = new bytes(24);
+
+        for (uint256 i = 0; i < from_len / 8; i++) {
+            bit_location_b[i] = bytes1(hex"ff");
+        }
+        for (uint256 i = 0; i < from_len % 8; i++) {
+            bit_location_b[from_len / 8] = setBit(
+                bit_location_b[from_len / 8],
+                uint8(i)
+            );
+        }
+
+        uint256 start_bytes = from_left_index / 8;
+        uint256 tmp_index = 8 - (from_left_index % 8);
+        for (uint256 i = 0; i < tmp_index; i++) {
+            bit_location_a[start_bytes] = setBit(
+                bit_location_a[start_bytes],
+                uint8(7 - i)
+            );
+        }
+
+        tmp_index = from_len - tmp_index;
+        for (uint256 i = 0; i < tmp_index / 8; i++) {
+            bit_location_a[start_bytes + 1 + i] = bytes1(hex"ff");
+        }
+
+        for (uint256 i = 0; i < tmp_index % 8; i++) {
+            bit_location_a[start_bytes + 1 + tmp_index / 8] = setBit(
+                bit_location_a[start_bytes + 1 + tmp_index / 8],
+                uint8(i)
+            );
+        }
+        return (bit_location_a, bit_location_b);
+    }
+
+    function sha256PaddingLen(uint256 input_len) public pure returns (uint256) {
+        uint256 input_remainder = (input_len * 8) % 512;
+        uint256 padding_count = 0;
+        if (input_remainder < 448) {
+            padding_count = (448 - input_remainder) / 8;
+        } else {
+            padding_count = (448 + 512 - input_remainder) / 8;
+        }
+        return input_len + padding_count + 8;
+    }
+
+    // function sha256PaddingBytes(bytes calldata input, uint256 expect_len)
+    //     public
+    //     pure
+    //     returns (bytes memory)
+    // {
+    //     uint256 input_remainder = (input.length * 8) % 512;
+    //     uint256 padding_count = 0;
+    //     if (input_remainder < 448) {
+    //         padding_count = (448 - input_remainder) / 8;
+    //     } else {
+    //         padding_count = (448 + 512 - input_remainder) / 8;
+    //     }
+    //     bytes memory padding_data = new bytes(expect_len - input.length);
+    //     padding_data[0] = bytes1(uint8(1) << 7);
+    //     for (uint256 i = 0; i < padding_count - 1; i++) {
+    //         padding_data[i + 1] = 0;
+    //     }
+    //     bytes memory input_len_bytes = abi.encodePacked(
+    //         uint64(input.length * 8)
+    //     );
+    //     for (uint256 i = 0; i < 8; i++) {
+    //         padding_data[padding_count + i] = input_len_bytes[i];
+    //     }
+
+    //     return abi.encodePacked(input, padding_data);
+    // }
+
     function checkPublicInputs1024(
+        bytes32 header_hash,
+        bytes32 addr_hash,
+        bytes32 pub_match_hash,
+        uint32 header_len,
         uint32 from_left_index,
         uint32 from_len,
         uint256[] memory public_inputs
-    )
-        public
-        pure
-        returns (
-            bytes32,
-            bytes32,
-            bytes32
-        )
-    {
+    ) public pure returns (bool) {
         require(from_left_index + from_len < 1024, "from param error");
         require(from_len > 4, "from param error");
         require(from_len < 193, "from param error");
-        require(public_inputs.length == 12, "public inputs error");
+        require(public_inputs.length == 1, "public inputs error");
 
-        bytes32 header_hash = (bytes32)(
-            (public_inputs[0] << 128) | ((public_inputs[1] << 128) >> 128)
+        (
+            bytes memory bit_location_a,
+            bytes memory bit_location_b
+        ) = bitLocation(from_left_index, from_len, 1024);
+
+        bytes32 hash_result = sha256(
+            abi.encodePacked(
+                header_hash,
+                addr_hash,
+                bit_location_a,
+                bit_location_b,
+                pub_match_hash,
+                uint16(sha256PaddingLen(header_len) / 64),
+                uint16(sha256PaddingLen(from_len) / 64)
+            )
         );
-        bytes32 from_hash = (bytes32)(
-            (public_inputs[2] << 128) | ((public_inputs[3] << 128) >> 128)
-        );
 
-        uint256 start_index = from_left_index / 252;
-        uint256 header_offset = from_left_index % 252;
-        for (uint256 i = 0; i < from_len; ) {
-            if (header_offset == 252) {
-                start_index++;
-                header_offset = 0;
-            }
-
-            // check header mask string
-            require(
-                (public_inputs[4 + start_index] >> (252 - header_offset - 1)) &
-                    uint256(1) ==
-                    uint256(1),
-                "unmatch"
+        hash_result =
+            hash_result &
+            bytes32(
+                0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
             );
 
-            // check addr mask string
-            require(
-                (public_inputs[9] >> (192 - i - 1)) & uint256(1) == uint256(1),
-                "unmatch"
-            );
-
-            header_offset++;
-            unchecked {
-                ++i;
-            }
-        }
-
-        bytes32 header_pub_match_hash = (bytes32)(
-            (public_inputs[10] << 128) | ((public_inputs[11] << 128) >> 128)
-        );
-
-        // console.logBytes32(header_hash);
-        // console.logBytes32(from_hash);
-        // console.logBytes32(header_pub_match_hash);
-
-        return (header_hash, from_hash, header_pub_match_hash);
+        return hash_result == bytes32(public_inputs[0]);
     }
 
     function checkPublicInputs2048(
+        bytes32 header_hash,
+        bytes32 addr_hash,
+        bytes32 pub_match_hash,
+        uint32 header_len,
         uint32 from_left_index,
         uint32 from_len,
         uint256[] memory public_inputs
-    )
-        public
-        pure
-        returns (
-            bytes32,
-            bytes32,
-            bytes32
-        )
-    {
+    ) public pure returns (bool) {
         require(from_left_index + from_len < 2048, "from param error");
         require(from_len > 4, "from param error");
         require(from_len < 193, "from param error");
-        require(public_inputs.length == 16, "public inputs error");
+        require(public_inputs.length == 1, "public inputs error");
 
-        bytes32 header_hash = (bytes32)(
-            (public_inputs[0] << 128) | ((public_inputs[1] << 128) >> 128)
+        (
+            bytes memory bit_location_a,
+            bytes memory bit_location_b
+        ) = bitLocation(from_left_index, from_len, 2048);
+
+        bytes32 hash_result = sha256(
+            abi.encodePacked(
+                header_hash,
+                addr_hash,
+                bit_location_a,
+                bit_location_b,
+                pub_match_hash,
+                uint16(sha256PaddingLen(header_len) / 64),
+                uint16(sha256PaddingLen(from_len) / 64)
+            )
         );
-        bytes32 from_hash = (bytes32)(
-            (public_inputs[2] << 128) | ((public_inputs[3] << 128) >> 128)
-        );
 
-        uint256 start_index = from_left_index / 252;
-        uint256 header_offset = from_left_index % 252;
-        for (uint256 i = 0; i < from_len; ) {
-            if (header_offset == 252) {
-                start_index++;
-                header_offset = 0;
-            }
-
-            // check header mask string
-            require(
-                (public_inputs[4 + start_index] >> (252 - header_offset - 1)) &
-                    uint256(1) ==
-                    uint256(1),
-                "unmatch"
+        hash_result =
+            hash_result &
+            bytes32(
+                0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
             );
 
-            // check addr mask string
-            require(
-                (public_inputs[13] >> (192 - i - 1)) & uint256(1) == uint256(1),
-                "unmatch"
-            );
+        return hash_result == bytes32(public_inputs[0]);
+    }
 
-            header_offset++;
-            unchecked {
-                ++i;
-            }
+    function checkPublicInputs2048tri(
+        bytes32[] memory header_hash,
+        bytes32[] memory addr_hash,
+        bytes32[] memory pub_match_hash,
+        uint32[] memory header_len,
+        uint32[] memory from_left_index,
+        uint32[] memory from_len,
+        uint256[] memory public_inputs
+    ) public pure returns (bool) {
+        require(public_inputs.length == 1, "public inputs error");
+        bytes[] memory concat_input = new bytes[](3);
+        // first email
+        {
+            (
+                bytes memory bit_location_a,
+                bytes memory bit_location_b
+            ) = bitLocation(from_left_index[0], from_len[0], 2048);
+            concat_input[0] = abi.encodePacked(
+                header_hash[0],
+                addr_hash[0],
+                bit_location_a,
+                bit_location_b,
+                pub_match_hash[0],
+                uint16(sha256PaddingLen(header_len[0]) / 64),
+                uint16(sha256PaddingLen(from_len[0]) / 64)
+            );
+        }
+        // second email
+        {
+            (
+                bytes memory bit_location_a,
+                bytes memory bit_location_b
+            ) = bitLocation(from_left_index[1], from_len[1], 2048);
+            concat_input[1] = abi.encodePacked(
+                header_hash[1],
+                addr_hash[1],
+                bit_location_a,
+                bit_location_b,
+                pub_match_hash[1],
+                uint16(sha256PaddingLen(header_len[1]) / 64),
+                uint16(sha256PaddingLen(from_len[1]) / 64)
+            );
+        }
+        // third email
+        {
+            (
+                bytes memory bit_location_a,
+                bytes memory bit_location_b
+            ) = bitLocation(from_left_index[2], from_len[2], 2048);
+            concat_input[2] = abi.encodePacked(
+                header_hash[2],
+                addr_hash[2],
+                bit_location_a,
+                bit_location_b,
+                pub_match_hash[2],
+                uint16(sha256PaddingLen(header_len[2]) / 64),
+                uint16(sha256PaddingLen(from_len[2]) / 64)
+            );
         }
 
-        bytes32 header_pub_match_hash = (bytes32)(
-            (public_inputs[14] << 128) | ((public_inputs[15] << 128) >> 128)
+        bytes32 hash_result = sha256(
+            abi.encodePacked(concat_input[0], concat_input[1], concat_input[2])
         );
 
-        // console.logBytes32(header_hash);
-        // console.logBytes32(from_hash);
-        // console.logBytes32(header_pub_match_hash);
+        hash_result =
+            hash_result &
+            bytes32(
+                0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+            );
 
-        return (header_hash, from_hash, header_pub_match_hash);
+        return hash_result == bytes32(public_inputs[0]);
     }
 
     function verifyV1024(
@@ -607,19 +720,13 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             }
         }
         // `q_table(z)`
-        proof.q_table_at_z = PairingsBn254.new_fr(
-            serialized_proof[j]
-        );
+        proof.q_table_at_z = PairingsBn254.new_fr(serialized_proof[j]);
         j += 1;
         // `q_lookup(z)`
-        proof.q_lookup_at_z = PairingsBn254.new_fr(
-            serialized_proof[j]
-        );
+        proof.q_lookup_at_z = PairingsBn254.new_fr(serialized_proof[j]);
         j += 1;
         // `table(z)`
-        proof.table_at_z = PairingsBn254.new_fr(
-            serialized_proof[j]
-        );
+        proof.table_at_z = PairingsBn254.new_fr(serialized_proof[j]);
         j += 1;
 
         //w0(zw)

@@ -95,6 +95,12 @@ describe("plonk contract", function () {
       }
 
       let testTx = await ZkTest.testNew1024(
+        contractInput.headerHash,
+        contractInput.addrHash,
+        contractInput.headerPubMatch,
+        contractInput.headerLen,
+        contractInput.fromLeftIndex,
+        contractInput.fromLen,
         contractInput.domainSize,
         contractInput.vkData,
         contractInput.publicInputs,
@@ -148,6 +154,12 @@ describe("plonk contract", function () {
       }
 
       let testTx = await ZkTest.testNew2048(
+        contractInput.headerHash,
+        contractInput.addrHash,
+        contractInput.headerPubMatch,
+        contractInput.headerLen,
+        contractInput.fromLeftIndex,
+        contractInput.fromLen,
         contractInput.domainSize,
         contractInput.vkData,
         contractInput.publicInputs,
