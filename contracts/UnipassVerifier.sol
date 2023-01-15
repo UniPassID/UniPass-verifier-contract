@@ -120,33 +120,6 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         return input_len + padding_count + 8;
     }
 
-    // function sha256PaddingBytes(bytes calldata input, uint256 expect_len)
-    //     public
-    //     pure
-    //     returns (bytes memory)
-    // {
-    //     uint256 input_remainder = (input.length * 8) % 512;
-    //     uint256 padding_count = 0;
-    //     if (input_remainder < 448) {
-    //         padding_count = (448 - input_remainder) / 8;
-    //     } else {
-    //         padding_count = (448 + 512 - input_remainder) / 8;
-    //     }
-    //     bytes memory padding_data = new bytes(expect_len - input.length);
-    //     padding_data[0] = bytes1(uint8(1) << 7);
-    //     for (uint256 i = 0; i < padding_count - 1; i++) {
-    //         padding_data[i + 1] = 0;
-    //     }
-    //     bytes memory input_len_bytes = abi.encodePacked(
-    //         uint64(input.length * 8)
-    //     );
-    //     for (uint256 i = 0; i < 8; i++) {
-    //         padding_data[padding_count + i] = input_len_bytes[i];
-    //     }
-
-    //     return abi.encodePacked(input, padding_data);
-    // }
-
     function checkPublicInputs1024(
         bytes32 header_hash,
         bytes32 addr_hash,
