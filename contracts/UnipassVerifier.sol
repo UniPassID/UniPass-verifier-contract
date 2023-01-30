@@ -10,6 +10,15 @@ import "./PlookupSingleCore.sol";
 contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     // uint256 constant SERIALIZED_PROOF_LENGTH = 0;
 
+    struct PublicParams {
+        bytes32 header_hash;
+        bytes32 addr_hash;
+        bytes32 pub_match_hash;
+        uint32 header_len;
+        uint32 from_left_index;
+        uint32 from_len;
+    }
+
     address public admin;
 
     modifier adminOnly() {
@@ -121,33 +130,29 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function checkPublicInputs1024(
-        bytes32 header_hash,
-        bytes32 addr_hash,
-        bytes32 pub_match_hash,
-        uint32 header_len,
-        uint32 from_left_index,
-        uint32 from_len,
+        PublicParams memory public_params,
         uint256[] memory public_inputs
     ) public pure returns (bool) {
-        require(from_left_index + from_len < 1024, "from param error");
-        require(from_len > 4, "from param error");
-        require(from_len < 193, "from param error");
         require(public_inputs.length == 1, "public inputs error");
 
         (
             bytes memory bit_location_a,
             bytes memory bit_location_b
-        ) = bitLocation(from_left_index, from_len, 1024);
+        ) = bitLocation(
+                public_params.from_left_index,
+                public_params.from_len,
+                1024
+            );
 
         bytes32 hash_result = sha256(
             abi.encodePacked(
-                header_hash,
-                addr_hash,
+                public_params.header_hash,
+                public_params.addr_hash,
                 bit_location_a,
                 bit_location_b,
-                pub_match_hash,
-                uint16(sha256PaddingLen(header_len) / 64),
-                uint16(sha256PaddingLen(from_len) / 64)
+                public_params.pub_match_hash,
+                uint16(sha256PaddingLen(public_params.header_len) / 64),
+                uint16(sha256PaddingLen(public_params.from_len) / 64)
             )
         );
 
@@ -161,33 +166,29 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function checkPublicInputs2048(
-        bytes32 header_hash,
-        bytes32 addr_hash,
-        bytes32 pub_match_hash,
-        uint32 header_len,
-        uint32 from_left_index,
-        uint32 from_len,
+        PublicParams memory public_params,
         uint256[] memory public_inputs
     ) public pure returns (bool) {
-        require(from_left_index + from_len < 2048, "from param error");
-        require(from_len > 4, "from param error");
-        require(from_len < 193, "from param error");
         require(public_inputs.length == 1, "public inputs error");
 
         (
             bytes memory bit_location_a,
             bytes memory bit_location_b
-        ) = bitLocation(from_left_index, from_len, 2048);
+        ) = bitLocation(
+                public_params.from_left_index,
+                public_params.from_len,
+                2048
+            );
 
         bytes32 hash_result = sha256(
             abi.encodePacked(
-                header_hash,
-                addr_hash,
+                public_params.header_hash,
+                public_params.addr_hash,
                 bit_location_a,
                 bit_location_b,
-                pub_match_hash,
-                uint16(sha256PaddingLen(header_len) / 64),
-                uint16(sha256PaddingLen(from_len) / 64)
+                public_params.pub_match_hash,
+                uint16(sha256PaddingLen(public_params.header_len) / 64),
+                uint16(sha256PaddingLen(public_params.from_len) / 64)
             )
         );
 
@@ -201,30 +202,30 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function checkPublicInputs2048tri(
-        bytes32[] memory header_hash,
-        bytes32[] memory addr_hash,
-        bytes32[] memory pub_match_hash,
-        uint32[] memory header_len,
-        uint32[] memory from_left_index,
-        uint32[] memory from_len,
+        PublicParams[] memory public_params,
         uint256[] memory public_inputs
     ) public pure returns (bool) {
         require(public_inputs.length == 1, "public inputs error");
-        bytes[] memory concat_input = new bytes[](3);
+        bytes memory concat_input;
         // first email
         {
             (
                 bytes memory bit_location_a,
                 bytes memory bit_location_b
-            ) = bitLocation(from_left_index[0], from_len[0], 2048);
-            concat_input[0] = abi.encodePacked(
-                header_hash[0],
-                addr_hash[0],
+            ) = bitLocation(
+                    public_params[0].from_left_index,
+                    public_params[0].from_len,
+                    2048
+                );
+            concat_input = abi.encodePacked(
+                concat_input,
+                public_params[0].header_hash,
+                public_params[0].addr_hash,
                 bit_location_a,
                 bit_location_b,
-                pub_match_hash[0],
-                uint16(sha256PaddingLen(header_len[0]) / 64),
-                uint16(sha256PaddingLen(from_len[0]) / 64)
+                public_params[0].pub_match_hash,
+                uint16(sha256PaddingLen(public_params[0].header_len) / 64),
+                uint16(sha256PaddingLen(public_params[0].from_len) / 64)
             );
         }
         // second email
@@ -232,15 +233,20 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             (
                 bytes memory bit_location_a,
                 bytes memory bit_location_b
-            ) = bitLocation(from_left_index[1], from_len[1], 2048);
-            concat_input[1] = abi.encodePacked(
-                header_hash[1],
-                addr_hash[1],
+            ) = bitLocation(
+                    public_params[1].from_left_index,
+                    public_params[1].from_len,
+                    2048
+                );
+            concat_input = abi.encodePacked(
+                concat_input,
+                public_params[1].header_hash,
+                public_params[1].addr_hash,
                 bit_location_a,
                 bit_location_b,
-                pub_match_hash[1],
-                uint16(sha256PaddingLen(header_len[1]) / 64),
-                uint16(sha256PaddingLen(from_len[1]) / 64)
+                public_params[1].pub_match_hash,
+                uint16(sha256PaddingLen(public_params[1].header_len) / 64),
+                uint16(sha256PaddingLen(public_params[1].from_len) / 64)
             );
         }
         // third email
@@ -248,21 +254,24 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             (
                 bytes memory bit_location_a,
                 bytes memory bit_location_b
-            ) = bitLocation(from_left_index[2], from_len[2], 2048);
-            concat_input[2] = abi.encodePacked(
-                header_hash[2],
-                addr_hash[2],
+            ) = bitLocation(
+                    public_params[2].from_left_index,
+                    public_params[2].from_len,
+                    2048
+                );
+            concat_input = abi.encodePacked(
+                concat_input,
+                public_params[2].header_hash,
+                public_params[2].addr_hash,
                 bit_location_a,
                 bit_location_b,
-                pub_match_hash[2],
-                uint16(sha256PaddingLen(header_len[2]) / 64),
-                uint16(sha256PaddingLen(from_len[2]) / 64)
+                public_params[2].pub_match_hash,
+                uint16(sha256PaddingLen(public_params[2].header_len) / 64),
+                uint16(sha256PaddingLen(public_params[2].from_len) / 64)
             );
         }
 
-        bytes32 hash_result = sha256(
-            abi.encodePacked(concat_input[0], concat_input[1], concat_input[2])
-        );
+        bytes32 hash_result = sha256(concat_input);
 
         hash_result =
             hash_result &
@@ -279,107 +288,19 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) public view returns (bool) {
-        uint64 num_inputs = uint64(public_inputs.length);
         bytes32 vkhash = sha256(
-            abi.encodePacked(num_inputs, domain_size, vkdata)
+            abi.encodePacked(uint64(public_inputs.length), domain_size, vkdata)
         );
-        // console.log("-- [SC] verifyV1024 > start");
         require(vk1024hash == vkhash, "E: wrong vkey");
 
-        VerificationKey memory vk;
-        vk.domain_size = domain_size;
-        vk.num_inputs = num_inputs;
-
-        vk.omega = PairingsBn254.new_fr(vkdata[0]);
-
-        uint256 j = 1;
-        for (uint256 i = 0; i < STATE_WIDTH + 2 + 2; ) {
-            vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
+        return
+            verifyProof(
+                vkhash,
+                domain_size,
+                vkdata,
+                public_inputs,
+                serialized_proof
             );
-            j += 2;
-            unchecked {
-                ++i;
-            }
-        }
-
-        // console.log("-- [SC] verifyV2048 > selectors checked");
-
-        for (uint256 i = 0; i < STATE_WIDTH; ) {
-            vk.permutation_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
-            );
-            j += 2;
-            unchecked {
-                ++i;
-            }
-        }
-        // console.log("-- [SC] verifyV2048 > permutations checked");
-
-        for (uint256 i = 0; i < STATE_WIDTH + 1; ) {
-            vk.tables_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
-            );
-            j += 2;
-            unchecked {
-                ++i;
-            }
-        }
-        // console.log("-- [SC] verifyV2048 > tables checked");
-
-        // q_substring q_substring_r
-        for (uint256 i = 0; i < 2; ) {
-            vk.selector_commitments[STATE_WIDTH + 2 + 2 + i] = PairingsBn254
-                .new_g1_checked(vkdata[j], vkdata[j + 1]);
-            j += 2;
-            unchecked {
-                ++i;
-            }
-        }
-        // console.log("-- [SC] verifyV2048 > substr selectors checked");
-
-        uint256[2] memory tmpx;
-        uint256[2] memory tmpy;
-
-        tmpx[1] = vkdata[j];
-        j += 1;
-        tmpx[0] = vkdata[j];
-        j += 1;
-        tmpy[1] = vkdata[j];
-        j += 1;
-        tmpy[0] = vkdata[j];
-        j += 1;
-        vk.g2_x = PairingsBn254.new_g2(tmpx, tmpy);
-
-        Proof memory proof = deserialize_proof(public_inputs, serialized_proof);
-
-        // console.log("-- [SC] verifyV2048 > proof deserialized");
-
-        PartialVerifierState memory state;
-
-        (bool res, PairingsBn254.Fr memory return_zeta_pow_n) = verify_initial(
-            state,
-            proof,
-            vk,
-            vkhash
-        );
-        if (res == false) {
-            // console.log("-- [SC] verifyV2048 > initialized failed");
-            return false;
-        }
-
-        bool success = verify_commitments(return_zeta_pow_n, state, proof, vk);
-        // if (success) {
-        //     // console.log("-- [SC] verifyV1024 > Verified");
-        // } else {
-        //     // console.log("-- [SC] verifyV1024 > Failed");
-        // }
-        // console.log("-- [SC] verifyV1024 > res =", res);
-
-        return success;
     }
 
     function verifyV2048(
@@ -388,107 +309,18 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) public view returns (bool) {
-        uint64 num_inputs = uint64(public_inputs.length);
         bytes32 vkhash = sha256(
-            abi.encodePacked(num_inputs, domain_size, vkdata)
+            abi.encodePacked(uint64(public_inputs.length), domain_size, vkdata)
         );
-        // console.log("-- [SC] verifyV2048 > start");
         require(vk2048hash == vkhash, "E: wrong vkey");
-
-        VerificationKey memory vk;
-        vk.domain_size = domain_size;
-        vk.num_inputs = num_inputs;
-
-        vk.omega = PairingsBn254.new_fr(vkdata[0]);
-
-        uint256 j = 1;
-        for (uint256 i = 0; i < STATE_WIDTH + 2 + 2; ) {
-            vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
+        return
+            verifyProof(
+                vkhash,
+                domain_size,
+                vkdata,
+                public_inputs,
+                serialized_proof
             );
-            j += 2;
-            unchecked {
-                ++i;
-            }
-        }
-
-        // console.log("-- [SC] verifyV2048 > selectors checked");
-
-        for (uint256 i = 0; i < STATE_WIDTH; ) {
-            vk.permutation_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
-            );
-            j += 2;
-            unchecked {
-                ++i;
-            }
-        }
-        // console.log("-- [SC] verifyV2048 > permutations checked");
-
-        for (uint256 i = 0; i < STATE_WIDTH + 1; ) {
-            vk.tables_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
-            );
-            j += 2;
-            unchecked {
-                ++i;
-            }
-        }
-        // console.log("-- [SC] verifyV2048 > tables checked");
-
-        // q_substring q_substring_r
-        for (uint256 i = 0; i < 2; ) {
-            vk.selector_commitments[STATE_WIDTH + 2 + 2 + i] = PairingsBn254
-                .new_g1_checked(vkdata[j], vkdata[j + 1]);
-            j += 2;
-            unchecked {
-                ++i;
-            }
-        }
-        // console.log("-- [SC] verifyV2048 > substr selectors checked");
-
-        uint256[2] memory tmpx;
-        uint256[2] memory tmpy;
-
-        tmpx[1] = vkdata[j];
-        j += 1;
-        tmpx[0] = vkdata[j];
-        j += 1;
-        tmpy[1] = vkdata[j];
-        j += 1;
-        tmpy[0] = vkdata[j];
-        j += 1;
-        vk.g2_x = PairingsBn254.new_g2(tmpx, tmpy);
-
-        Proof memory proof = deserialize_proof(public_inputs, serialized_proof);
-
-        // console.log("-- [SC] verifyV2048 > proof deserialized");
-
-        PartialVerifierState memory state;
-
-        (bool res, PairingsBn254.Fr memory return_zeta_pow_n) = verify_initial(
-            state,
-            proof,
-            vk,
-            vkhash
-        );
-        if (res == false) {
-            // console.log("-- [SC] verifyV2048 > initialized failed");
-            return false;
-        }
-
-        bool success = verify_commitments(return_zeta_pow_n, state, proof, vk);
-        // if (success) {
-        //     console.log("-- [SC] verifyV2048 > Verified");
-        // } else {
-        //     console.log("-- [SC] verifyV2048 > Failed");
-        // }
-        // console.log("-- [SC] verifyV2048 > res =", res);
-
-        return success;
     }
 
     function verifyV2048tri(
@@ -497,84 +329,91 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) public view returns (bool) {
-        uint64 num_inputs = uint64(public_inputs.length);
         bytes32 vkhash = sha256(
-            abi.encodePacked(num_inputs, domain_size, vkdata)
+            abi.encodePacked(uint64(public_inputs.length), domain_size, vkdata)
         );
-        // console.log("-- [SC] verifyV2048 > start");
         require(vk2048trihash == vkhash, "E: wrong vkey");
+        return
+            verifyProof(
+                vkhash,
+                domain_size,
+                vkdata,
+                public_inputs,
+                serialized_proof
+            );
+    }
 
+    function verifyProof(
+        bytes32 vkhash,
+        uint128 domain_size,
+        uint256[] memory vkdata,
+        uint256[] memory public_inputs,
+        uint256[] memory serialized_proof
+    ) public view returns (bool) {
         VerificationKey memory vk;
         vk.domain_size = domain_size;
-        vk.num_inputs = num_inputs;
-
+        vk.num_inputs = uint64(public_inputs.length);
         vk.omega = PairingsBn254.new_fr(vkdata[0]);
 
-        uint256 j = 1;
-        for (uint256 i = 0; i < STATE_WIDTH + 2 + 2; ) {
-            vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
-            );
-            j += 2;
-            unchecked {
-                ++i;
+        {
+            uint256 j = 1;
+            for (uint256 i = 0; i < STATE_WIDTH + 2 + 2; ) {
+                vk.selector_commitments[i] = PairingsBn254.new_g1_checked(
+                    vkdata[j],
+                    vkdata[j + 1]
+                );
+                j += 2;
+                unchecked {
+                    ++i;
+                }
             }
-        }
 
-        // console.log("-- [SC] verifyV2048 > selectors checked");
-
-        for (uint256 i = 0; i < STATE_WIDTH; ) {
-            vk.permutation_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
-            );
-            j += 2;
-            unchecked {
-                ++i;
+            for (uint256 i = 0; i < STATE_WIDTH; ) {
+                vk.permutation_commitments[i] = PairingsBn254.new_g1_checked(
+                    vkdata[j],
+                    vkdata[j + 1]
+                );
+                j += 2;
+                unchecked {
+                    ++i;
+                }
             }
-        }
-        // console.log("-- [SC] verifyV2048 > permutations checked");
 
-        for (uint256 i = 0; i < STATE_WIDTH + 1; ) {
-            vk.tables_commitments[i] = PairingsBn254.new_g1_checked(
-                vkdata[j],
-                vkdata[j + 1]
-            );
-            j += 2;
-            unchecked {
-                ++i;
+            for (uint256 i = 0; i < STATE_WIDTH + 1; ) {
+                vk.tables_commitments[i] = PairingsBn254.new_g1_checked(
+                    vkdata[j],
+                    vkdata[j + 1]
+                );
+                j += 2;
+                unchecked {
+                    ++i;
+                }
             }
-        }
-        // console.log("-- [SC] verifyV2048 > tables checked");
 
-        // q_substring q_substring_r
-        for (uint256 i = 0; i < 2; ) {
-            vk.selector_commitments[STATE_WIDTH + 2 + 2 + i] = PairingsBn254
-                .new_g1_checked(vkdata[j], vkdata[j + 1]);
-            j += 2;
-            unchecked {
-                ++i;
+            // q_substring q_substring_r
+            for (uint256 i = 0; i < 2; ) {
+                vk.selector_commitments[STATE_WIDTH + 2 + 2 + i] = PairingsBn254
+                    .new_g1_checked(vkdata[j], vkdata[j + 1]);
+                j += 2;
+                unchecked {
+                    ++i;
+                }
             }
+
+            uint256[2] memory tmpx;
+            uint256[2] memory tmpy;
+
+            tmpx[1] = vkdata[j];
+            j += 1;
+            tmpx[0] = vkdata[j];
+            j += 1;
+            tmpy[1] = vkdata[j];
+            j += 1;
+            tmpy[0] = vkdata[j];
+            j += 1;
+            vk.g2_x = PairingsBn254.new_g2(tmpx, tmpy);
         }
-        // console.log("-- [SC] verifyV2048 > substr selectors checked");
-
-        uint256[2] memory tmpx;
-        uint256[2] memory tmpy;
-
-        tmpx[1] = vkdata[j];
-        j += 1;
-        tmpx[0] = vkdata[j];
-        j += 1;
-        tmpy[1] = vkdata[j];
-        j += 1;
-        tmpy[0] = vkdata[j];
-        j += 1;
-        vk.g2_x = PairingsBn254.new_g2(tmpx, tmpy);
-
         Proof memory proof = deserialize_proof(public_inputs, serialized_proof);
-
-        // console.log("-- [SC] verifyV2048 > proof deserialized");
 
         PartialVerifierState memory state;
 
@@ -585,17 +424,10 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             vkhash
         );
         if (res == false) {
-            // console.log("-- [SC] verifyV2048 > initialized failed");
             return false;
         }
 
         bool success = verify_commitments(return_zeta_pow_n, state, proof, vk);
-        // if (success) {
-        //     console.log("-- [SC] verifyV2048 > Verified");
-        // } else {
-        //     console.log("-- [SC] verifyV2048 > Failed");
-        // }
-        // console.log("-- [SC] verifyV2048 > res =", res);
 
         return success;
     }
