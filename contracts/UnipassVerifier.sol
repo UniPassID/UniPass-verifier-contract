@@ -217,12 +217,16 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                     public_params[0].from_len,
                     2048
                 );
+            bytes32 r = sha256(
+                abi.encodePacked(
+                    public_params[0].header_hash,
+                    public_params[0].addr_hash,
+                    bit_location_a,
+                    bit_location_b
+                )
+            );
             concat_input = abi.encodePacked(
-                concat_input,
-                public_params[0].header_hash,
-                public_params[0].addr_hash,
-                bit_location_a,
-                bit_location_b,
+                r,
                 public_params[0].pub_match_hash,
                 uint16(sha256PaddingLen(public_params[0].header_len) / 64),
                 uint16(sha256PaddingLen(public_params[0].from_len) / 64)
@@ -238,12 +242,17 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                     public_params[1].from_len,
                     2048
                 );
+            bytes32 r = sha256(
+                abi.encodePacked(
+                    public_params[1].header_hash,
+                    public_params[1].addr_hash,
+                    bit_location_a,
+                    bit_location_b
+                )
+            );
             concat_input = abi.encodePacked(
                 concat_input,
-                public_params[1].header_hash,
-                public_params[1].addr_hash,
-                bit_location_a,
-                bit_location_b,
+                r,
                 public_params[1].pub_match_hash,
                 uint16(sha256PaddingLen(public_params[1].header_len) / 64),
                 uint16(sha256PaddingLen(public_params[1].from_len) / 64)
@@ -259,12 +268,17 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                     public_params[2].from_len,
                     2048
                 );
+            bytes32 r = sha256(
+                abi.encodePacked(
+                    public_params[2].header_hash,
+                    public_params[2].addr_hash,
+                    bit_location_a,
+                    bit_location_b
+                )
+            );
             concat_input = abi.encodePacked(
                 concat_input,
-                public_params[2].header_hash,
-                public_params[2].addr_hash,
-                bit_location_a,
-                bit_location_b,
+                r,
                 public_params[2].pub_match_hash,
                 uint16(sha256PaddingLen(public_params[2].header_len) / 64),
                 uint16(sha256PaddingLen(public_params[2].from_len) / 64)
