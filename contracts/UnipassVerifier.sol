@@ -152,7 +152,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 bit_location_b,
                 public_params.pub_match_hash,
                 uint16(sha256PaddingLen(public_params.header_len) / 64),
-                uint16(sha256PaddingLen(public_params.from_len) / 64)
+                uint16(sha256PaddingLen(public_params.from_len + 32) / 64)
             )
         );
 
@@ -188,7 +188,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 bit_location_b,
                 public_params.pub_match_hash,
                 uint16(sha256PaddingLen(public_params.header_len) / 64),
-                uint16(sha256PaddingLen(public_params.from_len) / 64)
+                uint16(sha256PaddingLen(public_params.from_len + 32) / 64)
             )
         );
 
@@ -229,7 +229,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 r,
                 public_params[0].pub_match_hash,
                 uint16(sha256PaddingLen(public_params[0].header_len) / 64),
-                uint16(sha256PaddingLen(public_params[0].from_len) / 64)
+                uint16(sha256PaddingLen(public_params[0].from_len + 32) / 64)
             );
         }
         // second email
@@ -255,7 +255,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 r,
                 public_params[1].pub_match_hash,
                 uint16(sha256PaddingLen(public_params[1].header_len) / 64),
-                uint16(sha256PaddingLen(public_params[1].from_len) / 64)
+                uint16(sha256PaddingLen(public_params[1].from_len + 32) / 64)
             );
         }
         // third email
@@ -281,7 +281,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 r,
                 public_params[2].pub_match_hash,
                 uint16(sha256PaddingLen(public_params[2].header_len) / 64),
-                uint16(sha256PaddingLen(public_params[2].from_len) / 64)
+                uint16(sha256PaddingLen(public_params[2].from_len + 32) / 64)
             );
         }
 
