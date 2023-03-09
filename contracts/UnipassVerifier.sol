@@ -5,28 +5,36 @@ pragma solidity ^0.8.0;
 import "./PlonkCoreLib.sol";
 import "./PlookupSingleCore.sol";
 
-// import "hardhat/console.sol";
+struct PublicParams {
+    bytes32 header_hash;
+    bytes32 addr_hash;
+    bytes32 pub_match_hash;
+    uint32 header_len;
+    uint32 from_left_index;
+    uint32 from_len;
+}
+
+struct OpenIdPublicParams {
+    bytes concat_hash;
+    uint32 header_base64_len;
+    uint32 payload_left_index;
+    uint32 payload_base64_len;
+    uint32 addr_left_index;
+    uint32 addr_len;
+}
 
 contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
-    // uint256 constant SERIALIZED_PROOF_LENGTH = 0;
-
-    struct PublicParams {
-        bytes32 header_hash;
-        bytes32 addr_hash;
-        bytes32 pub_match_hash;
-        uint32 header_len;
-        uint32 from_left_index;
-        uint32 from_len;
-    }
-
     address public admin;
+
+    bytes32 vk1024hash;
+    bytes32 vk2048hash;
+    bytes32 vk2048trihash;
+    bytes32 openIdhash;
 
     modifier adminOnly() {
         require(msg.sender == admin, "!_!");
         _;
     }
-
-    receive() external payable {}
 
     constructor(address _admin) {
         admin = _admin;
@@ -37,11 +45,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     // first register srshash
-    function setupSRSHash(uint256 srshash_init)
-        public
-        adminOnly
-        returns (bool)
-    {
+    function setupSRSHash(
+        uint256 srshash_init
+    ) public adminOnly returns (bool) {
         srshash = bytes32(srshash_init);
         return true;
     }
@@ -67,6 +73,10 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             vk2048trihash = sha256(
                 abi.encodePacked(num_inputs, domain_size, vkdata)
             );
+        } else if (circuit_type == 4) {
+            openIdhash = sha256(
+                abi.encodePacked(num_inputs, domain_size, vkdata)
+            );
         } else {
             return false;
         }
@@ -74,29 +84,30 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function setBit(bytes1 a, uint8 n) public pure returns (bytes1) {
-        return a | bytes1(uint8(2**(7 - n)));
+        return a | bytes1(uint8(2 ** (7 - n)));
     }
 
     function bitLocation(
-        uint32 from_left_index,
-        uint32 from_len,
-        uint32 maxLen
+        uint32 b_left_index,
+        uint32 b_len,
+        uint32 maxaLen,
+        uint32 maxbLen
     ) public pure returns (bytes memory, bytes memory) {
-        bytes memory bit_location_a = new bytes(maxLen / 8);
-        bytes memory bit_location_b = new bytes(24);
+        bytes memory bit_location_a = new bytes(maxaLen / 8);
+        bytes memory bit_location_b = new bytes(maxbLen / 8);
 
-        for (uint256 i = 0; i < from_len / 8; i++) {
+        for (uint256 i = 0; i < b_len / 8; i++) {
             bit_location_b[i] = bytes1(hex"ff");
         }
-        for (uint256 i = 0; i < from_len % 8; i++) {
-            bit_location_b[from_len / 8] = setBit(
-                bit_location_b[from_len / 8],
+        for (uint256 i = 0; i < b_len % 8; i++) {
+            bit_location_b[b_len / 8] = setBit(
+                bit_location_b[b_len / 8],
                 uint8(i)
             );
         }
 
-        uint256 start_bytes = from_left_index / 8;
-        uint256 tmp_index = 8 - (from_left_index % 8);
+        uint256 start_bytes = b_left_index / 8;
+        uint256 tmp_index = 8 - (b_left_index % 8);
         for (uint256 i = 0; i < tmp_index; i++) {
             bit_location_a[start_bytes] = setBit(
                 bit_location_a[start_bytes],
@@ -104,7 +115,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             );
         }
 
-        tmp_index = from_len - tmp_index;
+        tmp_index = b_len - tmp_index;
         for (uint256 i = 0; i < tmp_index / 8; i++) {
             bit_location_a[start_bytes + 1 + i] = bytes1(hex"ff");
         }
@@ -141,7 +152,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         ) = bitLocation(
                 public_params.from_left_index,
                 public_params.from_len,
-                1024
+                1024,
+                192
             );
 
         bytes32 hash_result = sha256(
@@ -177,7 +189,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         ) = bitLocation(
                 public_params.from_left_index,
                 public_params.from_len,
-                2048
+                2048,
+                192
             );
 
         bytes32 hash_result = sha256(
@@ -201,6 +214,58 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         return hash_result == bytes32(public_inputs[0]);
     }
 
+    function checkPublicInputsOpenId(
+        OpenIdPublicParams memory public_params,
+        uint256[] memory public_inputs
+    ) public pure returns (bool) {
+        require(public_inputs.length == 1, "public inputs error");
+
+        (
+            bytes memory location_id_token_1,
+            bytes memory location_payload_base64
+        ) = bitLocation(
+                public_params.payload_left_index,
+                public_params.payload_base64_len - 1,
+                2048,
+                1536
+            );
+
+        (
+            bytes memory location_id_token_2,
+            bytes memory location_header_base64
+        ) = bitLocation(0, public_params.header_base64_len - 1, 2048, 512);
+
+        (
+            bytes memory location_payload_raw,
+            bytes memory location_email_addr
+        ) = bitLocation(
+                public_params.addr_left_index,
+                public_params.addr_len,
+                1152,
+                192
+            );
+
+        bytes memory sha256_input = abi.encodePacked(
+            public_params.concat_hash,
+            location_id_token_1,
+            location_payload_base64,
+            location_id_token_2,
+            location_header_base64,
+            location_payload_raw,
+            location_email_addr
+        );
+
+        bytes32 hash_result = sha256(sha256_input);
+
+        hash_result =
+            hash_result &
+            bytes32(
+                0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+            );
+
+        return hash_result == bytes32(public_inputs[0]);
+    }
+
     function checkPublicInputs2048tri(
         PublicParams[] memory public_params,
         uint256[] memory public_inputs
@@ -208,44 +273,20 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         require(public_inputs.length == 1, "public inputs error");
         bytes memory concat_input;
         // first email
-        {
+        for (uint256 i = 0; i < 3; i++) {
             (
                 bytes memory bit_location_a,
                 bytes memory bit_location_b
             ) = bitLocation(
-                    public_params[0].from_left_index,
-                    public_params[0].from_len,
-                    2048
+                    public_params[i].from_left_index,
+                    public_params[i].from_len,
+                    2048,
+                    192
                 );
             bytes32 r = sha256(
                 abi.encodePacked(
-                    public_params[0].header_hash,
-                    public_params[0].addr_hash,
-                    bit_location_a,
-                    bit_location_b
-                )
-            );
-            concat_input = abi.encodePacked(
-                r,
-                public_params[0].pub_match_hash,
-                uint16(sha256PaddingLen(public_params[0].header_len) / 64),
-                uint16(sha256PaddingLen(public_params[0].from_len + 32) / 64)
-            );
-        }
-        // second email
-        {
-            (
-                bytes memory bit_location_a,
-                bytes memory bit_location_b
-            ) = bitLocation(
-                    public_params[1].from_left_index,
-                    public_params[1].from_len,
-                    2048
-                );
-            bytes32 r = sha256(
-                abi.encodePacked(
-                    public_params[1].header_hash,
-                    public_params[1].addr_hash,
+                    public_params[i].header_hash,
+                    public_params[i].addr_hash,
                     bit_location_a,
                     bit_location_b
                 )
@@ -253,35 +294,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             concat_input = abi.encodePacked(
                 concat_input,
                 r,
-                public_params[1].pub_match_hash,
-                uint16(sha256PaddingLen(public_params[1].header_len) / 64),
-                uint16(sha256PaddingLen(public_params[1].from_len + 32) / 64)
-            );
-        }
-        // third email
-        {
-            (
-                bytes memory bit_location_a,
-                bytes memory bit_location_b
-            ) = bitLocation(
-                    public_params[2].from_left_index,
-                    public_params[2].from_len,
-                    2048
-                );
-            bytes32 r = sha256(
-                abi.encodePacked(
-                    public_params[2].header_hash,
-                    public_params[2].addr_hash,
-                    bit_location_a,
-                    bit_location_b
-                )
-            );
-            concat_input = abi.encodePacked(
-                concat_input,
-                r,
-                public_params[2].pub_match_hash,
-                uint16(sha256PaddingLen(public_params[2].header_len) / 64),
-                uint16(sha256PaddingLen(public_params[2].from_len + 32) / 64)
+                public_params[i].pub_match_hash,
+                uint16(sha256PaddingLen(public_params[i].header_len) / 64),
+                uint16(sha256PaddingLen(public_params[i].from_len + 32) / 64)
             );
         }
 
@@ -306,6 +321,27 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             abi.encodePacked(uint64(public_inputs.length), domain_size, vkdata)
         );
         require(vk1024hash == vkhash, "E: wrong vkey");
+
+        return
+            verifyProof(
+                vkhash,
+                domain_size,
+                vkdata,
+                public_inputs,
+                serialized_proof
+            );
+    }
+
+    function verifyOpenId(
+        uint128 domain_size,
+        uint256[] memory vkdata,
+        uint256[] memory public_inputs,
+        uint256[] memory serialized_proof
+    ) public view returns (bool) {
+        bytes32 vkhash = sha256(
+            abi.encodePacked(uint64(public_inputs.length), domain_size, vkdata)
+        );
+        require(openIdhash == vkhash, "E: wrong vkey");
 
         return
             verifyProof(

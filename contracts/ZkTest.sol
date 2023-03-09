@@ -4,10 +4,16 @@ pragma solidity ^0.8.0;
 
 import "./UnipassVerifier.sol";
 
-contract ZkTest is UnipassVerifier {
+// import "hardhat/console.sol";
+
+contract ZkTest {
     event Verified(bytes32 header_hash, uint256 sucess);
 
-    constructor(address _admin) UnipassVerifier(_admin) {}
+    UnipassVerifier verifier;
+
+    constructor(address _verifier) {
+        verifier = UnipassVerifier(_verifier);
+    }
 
     function testNew1024(
         bytes32 header_hash,
@@ -28,9 +34,50 @@ contract ZkTest is UnipassVerifier {
         public_params.header_len = header_len;
         public_params.from_left_index = from_left_index;
         public_params.from_len = from_len;
-        bool matched = checkPublicInputs1024(public_params, public_inputs);
+        bool matched = verifier.checkPublicInputs1024(
+            public_params,
+            public_inputs
+        );
 
-        bool success = verifyV1024(
+        bool success = verifier.verifyV1024(
+            domain_size,
+            vkdata,
+            public_inputs,
+            serialized_proof
+        );
+        if (success && matched) {
+            emit Verified("1", 1);
+        } else {
+            emit Verified("1001", 1001);
+        }
+
+        return (success && matched);
+    }
+
+    function testOpenId(
+        bytes memory concat_hash,
+        uint32 header_base64_len,
+        uint32 payload_left_index,
+        uint32 payload_base64_len,
+        uint32 addr_left_index,
+        uint32 addr_len,
+        uint128 domain_size,
+        uint256[] memory vkdata,
+        uint256[] calldata public_inputs,
+        uint256[] memory serialized_proof
+    ) public returns (bool) {
+        OpenIdPublicParams memory public_params;
+        public_params.concat_hash = concat_hash;
+        public_params.header_base64_len = header_base64_len;
+        public_params.payload_left_index = payload_left_index;
+        public_params.payload_base64_len = payload_base64_len;
+        public_params.addr_left_index = addr_left_index;
+        public_params.addr_len = addr_len;
+        bool matched = verifier.checkPublicInputsOpenId(
+            public_params,
+            public_inputs
+        );
+        bool success = verifier.verifyOpenId(
             domain_size,
             vkdata,
             public_inputs,
@@ -64,9 +111,11 @@ contract ZkTest is UnipassVerifier {
         public_params.header_len = header_len;
         public_params.from_left_index = from_left_index;
         public_params.from_len = from_len;
-        bool matched = checkPublicInputs2048(public_params, public_inputs);
-
-        bool success = verifyV2048(
+        bool matched = verifier.checkPublicInputs2048(
+            public_params,
+            public_inputs
+        );
+        bool success = verifier.verifyV2048(
             domain_size,
             vkdata,
             public_inputs,
@@ -82,40 +131,40 @@ contract ZkTest is UnipassVerifier {
     }
 
     function testNew2048tri(
-        // bytes32[] memory header_hash,
-        // bytes32[] memory addr_hash,
-        // bytes[] calldata header_pub_match,
-        // uint32[] memory header_len,
-        // uint32[] memory from_left_index,
-        // uint32[] memory from_len,
+        bytes32[] memory header_hash,
+        bytes32[] memory addr_hash,
+        bytes[] calldata header_pub_match,
+        uint32[] memory header_len,
+        uint32[] memory from_left_index,
+        uint32[] memory from_len,
         uint128 domain_size,
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) public returns (bool) {
-        // PublicParams[] memory public_params = new PublicParams[](3);
-        // for (uint256 i = 0; i < 3; i++) {
-        //     public_params[i].header_hash = header_hash[i];
-        //     public_params[i].addr_hash = addr_hash[i];
-        //     public_params[i].pub_match_hash = sha256(header_pub_match[i]);
-        //     public_params[i].header_len = header_len[i];
-        //     public_params[i].from_left_index = from_left_index[i];
-        //     public_params[i].from_len = from_len[i];
-        // }
+        PublicParams[] memory public_params = new PublicParams[](3);
+        for (uint256 i = 0; i < 3; i++) {
+            public_params[i].header_hash = header_hash[i];
+            public_params[i].addr_hash = addr_hash[i];
+            public_params[i].pub_match_hash = sha256(header_pub_match[i]);
+            public_params[i].header_len = header_len[i];
+            public_params[i].from_left_index = from_left_index[i];
+            public_params[i].from_len = from_len[i];
+        }
 
-        // bool matched = checkPublicInputs2048tri(public_params, public_inputs);
-        // if (!matched) {
-        //     emit Verified("1001", 1001);
-        //     return matched;
-        // }
+        bool matched = verifier.checkPublicInputs2048tri(
+            public_params,
+            public_inputs
+        );
 
-        bool success = verifyV2048tri(
+        bool success = verifier.verifyV2048tri(
             domain_size,
             vkdata,
             public_inputs,
             serialized_proof
         );
-       if (success) {
+
+        if (success && matched) {
             emit Verified("1", 1);
         } else {
             emit Verified("1001", 1001);

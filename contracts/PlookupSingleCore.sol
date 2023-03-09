@@ -13,18 +13,18 @@ contract Plonk4SingleVerifierWithAccessToDNext {
     using TranscriptLibrary for TranscriptLibrary.Transcript;
 
     /**
-     * State width is set to be 5. 
+     * State width is set to be 5.
      * | w_0 | w_1 | w_2 | w_3 | w_4 |
      * The verifier checks if the arithmetic constraint
      * holds for each the step i.
-     * 
+     *
      * ( q_0[i] * w0[i] + q_1[i] * w1[i] + q_2[i] * w2[i] + q_3[i] * w3[i] + q_m[i] * w0[i] * w1[i] + q_c[i] - PI[i])
      * + alpha * ( z[i]*(w0[X] + 1*beta*X +gamma)(7)(13)(17) - z[wi]*(w0[X] + beta*sigma0[X] +gamma)()()()
      *               + alpha*L1[X]*(z[i] - 1) )
      * + alpha^3 * ( zlookup[i]*(qlookup[i]*v[i] +gamma)*(t[i] + beta*t[wi] + (beta+1)*gamma)
      *                - zlookup[wi]*gamma*(s[i] + beta*s[wi] + (beta+1)*gamma)
      *                   + alpha*L1[X]*(zlookup[i] - 1) )
-     * + alpha^5 * ( z_substring[wi] - z_substring[i] + q_substring[i]*(w2[i]*w3[i] -w0[i]*w1[i]) 
+     * + alpha^5 * ( z_substring[wi] - z_substring[i] + q_substring[i]*(w2[i]*w3[i] -w0[i]*w1[i])
      *                + alpha * q_substring_r[i]*( w0[wi]*w3[i]*(w2[i] +w0[wi] -w0[i]) -w2[wi] )
      *                + alpha^2 * z_substring[i] * L1[X]
      *              )
@@ -49,9 +49,6 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.G2Point g2_x;
     }
 
-    bytes32 vk1024hash;
-    bytes32 vk2048hash;
-    bytes32 vk2048trihash;
     bytes32 srshash;
 
     struct Proof {
@@ -190,7 +187,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         );
         PairingsBn254.Fr[] memory dens = new PairingsBn254.Fr[](
             poly_nums.length
-        ); 
+        );
 
         uint256 dens_len = dens.length;
         /// compute numerators `nums` and denumerators `dens`, both of `poly_nums.length`
@@ -253,11 +250,10 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         return (nums, return_zeta_pow_n);
     }
 
-    function evaluate_vanishing(uint256 domain_size, PairingsBn254.Fr memory at)
-        internal
-        view
-        returns (PairingsBn254.Fr memory res)
-    {
+    function evaluate_vanishing(
+        uint256 domain_size,
+        PairingsBn254.Fr memory at
+    ) internal view returns (PairingsBn254.Fr memory res) {
         res = at.pow(domain_size);
         res.sub_assign(PairingsBn254.new_fr(1));
     }
@@ -614,7 +610,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         grand_product_part_at_z.mul_assign(tmp_fr);
         tmp_fr.mul_assign(state.alpha);
 
-        // (alpha^2 * L1[z] - 1) 
+        // (alpha^2 * L1[z] - 1)
         tmp_fr1.assign(state.cached_lagrange_evals[0]);
         tmp_fr1.mul_assign(tmp_fr);
         tmp_fr1.sub_assign(one);
@@ -634,9 +630,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         // * v*alpha^5
         tmp_fr1.mul_assign(tmp_fr0);
         // * [z_substring]
-        tmp_g1 = proof.z_substring_commitment.point_mul(
-            tmp_fr1
-        );
+        tmp_g1 = proof.z_substring_commitment.point_mul(tmp_fr1);
         res.point_add_assign(tmp_g1);
 
         // (w2[z]*w3[z] -w0[z]*w1[z]) *[q_substring]
@@ -719,13 +713,13 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_fr0.add_assign(state.u);
         tmp_g1 = proof.wire_commitments[0].point_mul(tmp_fr0);
         commitment_aggregation.point_add_assign(tmp_g1);
-        
+
         // (v^4 + uv5)
         tmp_fr.assign(out_vu);
         tmp_fr0.assign(aggregation_challenge);
         tmp_fr.add_assign(tmp_fr0);
         tmp_fr.mul_assign(tmp_fr0);
-        
+
         // v^3
         aggregation_challenge.mul_assign(state.v);
         tmp_g1 = proof.wire_commitments[1].point_mul(aggregation_challenge);
@@ -792,7 +786,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
          *      + v^11 qtable(z) + v^12 qlookup(z) + v^13 table(z)
          *      + u* w0(zomega) + u*v z(zomega) + u*v2 s(zomega) + u*v3 zlookup(zomega)
          *      + u*v4 table(zomega)
-        *      + uv5 * w2(zomega) + uv6 * z_substring(zomega)
+         *      + uv5 * w2(zomega) + uv6 * z_substring(zomega)
          */
         // collect opening values
         aggregation_challenge.assign(state.v);
