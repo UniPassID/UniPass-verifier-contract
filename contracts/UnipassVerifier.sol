@@ -93,6 +93,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         uint32 maxaLen,
         uint32 maxbLen
     ) public pure returns (bytes memory, bytes memory) {
+        require(b_left_index < maxaLen * 8, "b_left_index is out of range");
+        require(b_len <= maxbLen * 8, "b_len is too large");
+
         bytes memory bit_location_a = new bytes(maxaLen / 8);
         bytes memory bit_location_b = new bytes(maxbLen / 8);
 
