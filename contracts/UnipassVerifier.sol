@@ -99,10 +99,10 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         bytes memory bit_location_a = new bytes(maxaLen / 8);
         bytes memory bit_location_b = new bytes(maxbLen / 8);
 
-        for (uint256 i = 0; i < b_len / 8; i++) {
+        for (uint256 i = 0; i < b_len / 8; ++i) {
             bit_location_b[i] = bytes1(hex"ff");
         }
-        for (uint256 i = 0; i < b_len % 8; i++) {
+        for (uint256 i = 0; i < b_len % 8; ++i) {
             bit_location_b[b_len / 8] = setBit(
                 bit_location_b[b_len / 8],
                 uint8(i)
@@ -111,7 +111,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
 
         uint256 start_bytes = b_left_index / 8;
         uint256 tmp_index = 8 - (b_left_index % 8);
-        for (uint256 i = 0; i < tmp_index; i++) {
+        for (uint256 i = 0; i < tmp_index; ++i) {
             bit_location_a[start_bytes] = setBit(
                 bit_location_a[start_bytes],
                 uint8(7 - i)
@@ -119,11 +119,11 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         }
 
         tmp_index = b_len - tmp_index;
-        for (uint256 i = 0; i < tmp_index / 8; i++) {
+        for (uint256 i = 0; i < tmp_index / 8; ++i) {
             bit_location_a[start_bytes + 1 + i] = bytes1(hex"ff");
         }
 
-        for (uint256 i = 0; i < tmp_index % 8; i++) {
+        for (uint256 i = 0; i < tmp_index % 8; ++i) {
             bit_location_a[start_bytes + 1 + tmp_index / 8] = setBit(
                 bit_location_a[start_bytes + 1 + tmp_index / 8],
                 uint8(i)
@@ -276,7 +276,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         require(public_inputs.length == 1, "public inputs error");
         bytes memory concat_input;
         // first email
-        for (uint256 i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; ++i) {
             (
                 bytes memory bit_location_a,
                 bytes memory bit_location_b

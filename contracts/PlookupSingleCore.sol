@@ -195,7 +195,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         // denoms in a form (z - omega^i) * N
         // tmp_1 = omega.pow(poly_nums[0]); // power of omega
         uint256 poly_nums_len = poly_nums.length;
-        for (uint256 i = 0; i < poly_nums_len; i++) {
+        for (uint256 i = 0; i < poly_nums_len; ++i) {
             //  = omega.pow(poly_nums[i]); // power of omega
             nums[i].assign(vanishing_at_z);
             nums[i].mul_assign(tmp_1);
@@ -219,7 +219,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             dens_len
         ); // Ln
         partial_products[0].assign(PairingsBn254.new_fr(1));
-        for (uint256 i = 1; i < dens_len; i++) {
+        for (uint256 i = 1; i < dens_len; ++i) {
             partial_products[i].assign(partial_products[i - 1]);
             partial_products[i].mul_assign(dens[i - 1]);
         }
@@ -240,7 +240,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
         /// `nums[i] / dens[i]`
         uint256 nums_len = nums.length;
-        for (uint256 i = 0; i < nums_len; i++) {
+        for (uint256 i = 0; i < nums_len; ++i) {
             nums[i].mul_assign(dens[i]);
         }
 
@@ -299,7 +299,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.Fr memory inputs_term = PairingsBn254.new_fr(0);
         PairingsBn254.Fr memory tmp = PairingsBn254.new_fr(0);
         uint256 inputs_len = proof.input_values.length;
-        for (uint256 i = 0; i < inputs_len; i++) {
+        for (uint256 i = 0; i < inputs_len; ++i) {
             tmp.assign(state.cached_lagrange_evals[i]);
             tmp.mul_assign(PairingsBn254.new_fr(proof.input_values[i]));
             inputs_term.add_assign(tmp);
@@ -317,7 +317,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             proof.grand_product_at_z_omega
         );
         //"r_permu"
-        for (uint256 i = 0; i < STATE_WIDTH - 1; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH - 1; ++i) {
             tmp.assign(proof.permutation_polynomials_at_z[i]);
             tmp.mul_assign(state.beta);
             tmp.add_assign(state.gamma);
@@ -435,7 +435,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_g1 = vk.selector_commitments[STATE_WIDTH].point_mul(tmp_fr1);
         res.point_add_assign(tmp_g1);
 
-        for (uint256 i = 1; i < STATE_WIDTH; i++) {
+        for (uint256 i = 1; i < STATE_WIDTH; ++i) {
             // v*wi [qi]
             tmp_fr1.assign(state.v);
             tmp_fr1.mul_assign(proof.wire_values_at_z[i]);
@@ -506,7 +506,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         grand_product_part_at_z.mul_assign(state.beta);
         grand_product_part_at_z.add_assign(proof.wire_values_at_z[0]);
         grand_product_part_at_z.add_assign(state.gamma);
-        for (uint256 i = 1; i < STATE_WIDTH - 1; i++) {
+        for (uint256 i = 1; i < STATE_WIDTH - 1; ++i) {
             // *(w_i(z) + beta * sigma_i(z) + gamma)
             tmp_fr.assign(proof.permutation_polynomials_at_z[i]);
             tmp_fr.mul_assign(state.beta);
@@ -551,7 +551,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         // [zlookup]
         // w0+ eta*w1 + ... + eta5*qtable
         grand_product_part_at_z.assign(proof.wire_values_at_z[0]);
-        for (uint256 i = 1; i < STATE_WIDTH; i++) {
+        for (uint256 i = 1; i < STATE_WIDTH; ++i) {
             tmp_fr.assign(proof.wire_values_at_z[i]);
             tmp_fr.mul_assign(tmp_fr2);
             grand_product_part_at_z.add_assign(tmp_fr);
@@ -695,7 +695,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             proof.quotient_poly_commitments[0]
         );
         PairingsBn254.Fr memory tmp_fr = PairingsBn254.new_fr(1);
-        for (uint256 i = 1; i < STATE_WIDTH; i++) {
+        for (uint256 i = 1; i < STATE_WIDTH; ++i) {
             tmp_fr.mul_assign(zeta_n);
             tmp_g1 = proof.quotient_poly_commitments[i].point_mul(tmp_fr);
             commitment_aggregation.point_add_assign(tmp_g1);
@@ -731,14 +731,14 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
         // v^5
         aggregation_challenge.mul_assign(tmp_fr0);
-        for (uint256 i = 3; i < STATE_WIDTH; i++) {
+        for (uint256 i = 3; i < STATE_WIDTH; ++i) {
             tmp_g1 = proof.wire_commitments[i].point_mul(aggregation_challenge);
             commitment_aggregation.point_add_assign(tmp_g1);
             aggregation_challenge.mul_assign(state.v);
         }
 
         /// [F] += v^7 * [sigma_0] + v^8 * [sigma_1] + v^9 * [sigma_2] + v^10 * [sigma_3]
-        for (uint256 i = 0; i < STATE_WIDTH - 1; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH - 1; ++i) {
             tmp_g1 = vk.permutation_commitments[i].point_mul(
                 aggregation_challenge
             );
@@ -761,7 +761,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.G1Point memory tables_comms_combine = PairingsBn254
             .copy_g1(vk.tables_commitments[0]);
         tmp_fr0.assign(state.eta);
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ++i) {
             tmp_g1 = vk.tables_commitments[i + 1].point_mul(tmp_fr0);
             tables_comms_combine.point_add_assign(tmp_g1);
 
@@ -799,14 +799,14 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_fr.mul_assign(aggregation_challenge);
         aggregated_value.add_assign(tmp_fr);
         // + v2*w0 + ... + v5*w3 ...
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ++i) {
             aggregation_challenge.mul_assign(state.v);
             tmp_fr.assign(proof.wire_values_at_z[i]);
             tmp_fr.mul_assign(aggregation_challenge);
             aggregated_value.add_assign(tmp_fr);
         }
         // + v7*sigma0 + ... + v8*sigma2 ...
-        for (uint256 i = 0; i < STATE_WIDTH - 1; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH - 1; ++i) {
             aggregation_challenge.mul_assign(state.v);
             tmp_fr.assign(proof.permutation_polynomials_at_z[i]);
             tmp_fr.mul_assign(aggregation_challenge);
@@ -916,12 +916,12 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         // add circuit
         transcript.update_with_u256(uint256(vkhash));
 
-        for (uint256 i = 0; i < vk.num_inputs; i++) {
+        for (uint256 i = 0; i < vk.num_inputs; ++i) {
             transcript.update_with_u256(proof.input_values[i]);
         }
 
         //step 1
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ++i) {
             transcript.update_with_g1(proof.wire_commitments[i]);
         }
         state.eta = transcript.get_challenge();
@@ -940,7 +940,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         state.alpha = transcript.get_challenge();
 
         //step 4
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ++i) {
             transcript.update_with_g1(proof.quotient_poly_commitments[i]);
         }
         state.z = transcript.get_challenge();
@@ -955,7 +955,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             vk.num_inputs + tmp
         );
         uint256 lagrange_poly_len = lagrange_poly_numbers.length;
-        for (uint256 i = 0; i < lagrange_poly_len; i++) {
+        for (uint256 i = 0; i < lagrange_poly_len; ++i) {
             lagrange_poly_numbers[i] = i;
         }
 
@@ -978,10 +978,10 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         //add evaluations z
         transcript.update_with_fr(proof.quotient_polynomial_at_z);
         transcript.update_with_fr(proof.linearization_polynomial_at_z);
-        for (uint256 i = 0; i < STATE_WIDTH; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH; ++i) {
             transcript.update_with_fr(proof.wire_values_at_z[i]);
         }
-        for (uint256 i = 0; i < STATE_WIDTH - 1; i++) {
+        for (uint256 i = 0; i < STATE_WIDTH - 1; ++i) {
             transcript.update_with_fr(proof.permutation_polynomials_at_z[i]);
         }
         transcript.update_with_fr(proof.q_table_at_z);

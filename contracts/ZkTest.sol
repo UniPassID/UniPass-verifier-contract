@@ -143,7 +143,7 @@ contract ZkTest {
         uint256[] memory serialized_proof
     ) public returns (bool) {
         PublicParams[] memory public_params = new PublicParams[](3);
-        for (uint256 i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; ++i) {
             public_params[i].header_hash = header_hash[i];
             public_params[i].addr_hash = addr_hash[i];
             public_params[i].pub_match_hash = sha256(header_pub_match[i]);
