@@ -174,7 +174,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         )
     {
         PairingsBn254.Fr memory one = PairingsBn254.new_fr(1);
-        PairingsBn254.Fr memory tmp_1 = PairingsBn254.new_fr(1);
+        PairingsBn254.Fr memory tmp_1 = PairingsBn254.copy(one);
         PairingsBn254.Fr memory tmp_2 = PairingsBn254.new_fr(domain_size);
         PairingsBn254.Fr memory vanishing_at_z = at.pow(domain_size);
         return_zeta_pow_n = PairingsBn254.copy(vanishing_at_z);
@@ -213,7 +213,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.Fr[] memory partial_products = new PairingsBn254.Fr[](
             dens_len
         ); // Ln
-        partial_products[0].assign(PairingsBn254.new_fr(1));
+        partial_products[0].assign(PairingsBn254.copy(one));
         for (uint256 i = 1; i < dens_len; ++i) {
             partial_products[i].assign(partial_products[i - 1]);
             partial_products[i].mul_assign(dens[i - 1]);
@@ -262,7 +262,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
     ) internal pure returns (bool) {
         /// lhs = t(z) * v(z)
         PairingsBn254.Fr memory lhs = PairingsBn254.copy(zeta_n);
-        lhs.sub_assign(PairingsBn254.new_fr(1));
+        PairingsBn254.Fr memory one = PairingsBn254.new_fr(1);
+        lhs.sub_assign(one);
         require(lhs.value != 0); // we can not check a polynomial relationship if point `z` is in the domain
         lhs.mul_assign(proof.quotient_polynomial_at_z);
 
@@ -340,7 +341,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         r_permu.mul_assign(state.beta_1);
 
         tmp.assign(state.beta_1);
-        tmp.add_assign(PairingsBn254.new_fr(1));
+        tmp.add_assign(one);
         tmp.mul_assign(state.gamma_1);
         r_permu.add_assign(tmp);
 
