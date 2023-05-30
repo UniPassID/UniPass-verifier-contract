@@ -160,7 +160,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
     /// Presumably, n Lagrange polynomial evaluations involves n inversion,
     /// whereas Montgomery batch inversion reduce it to only one.
     function batch_evaluate_lagrange_poly_out_of_domain(
-        uint256[] memory poly_nums, //just [0,n)
+        uint256 poly_nums_len, //just [0,n)
         uint256 domain_size,
         PairingsBn254.Fr memory omega,
         PairingsBn254.Fr memory at
@@ -182,19 +182,14 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
         // we can not have random point z be in domain
         require(vanishing_at_z.value != 0);
-        PairingsBn254.Fr[] memory nums = new PairingsBn254.Fr[](
-            poly_nums.length
-        );
-        PairingsBn254.Fr[] memory dens = new PairingsBn254.Fr[](
-            poly_nums.length
-        );
+        PairingsBn254.Fr[] memory nums = new PairingsBn254.Fr[](poly_nums_len);
+        PairingsBn254.Fr[] memory dens = new PairingsBn254.Fr[](poly_nums_len);
 
         uint256 dens_len = dens.length;
         /// compute numerators `nums` and denumerators `dens`, both of `poly_nums.length`
         // numerators in a form omega^i * (z^n - 1)
         // denoms in a form (z - omega^i) * N
         // tmp_1 = omega.pow(poly_nums[0]); // power of omega
-        uint256 poly_nums_len = poly_nums.length;
         for (uint256 i = 0; i < poly_nums_len; ++i) {
             //  = omega.pow(poly_nums[i]); // power of omega
             nums[i].assign(vanishing_at_z);
@@ -964,7 +959,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             // state.cached_lagrange_eval_Ln,
             return_zeta_pow_n
         ) = batch_evaluate_lagrange_poly_out_of_domain(
-            lagrange_poly_numbers,
+            lagrange_poly_numbers.length,
             vk.domain_size,
             vk.omega,
             state.z
