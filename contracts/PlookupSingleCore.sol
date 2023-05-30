@@ -224,7 +224,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
         tmp_2 = tmp_2.inverse(); // tmp_2 contains a^-1 * b^-1 (with! the last one)
 
-        PairingsBn254.Fr memory tmp3 = PairingsBn254.new_fr(0);
+        PairingsBn254.Fr memory tmp3;
         for (uint256 i = dens_len - 1; ; i--) {
             tmp3.assign(dens[i]);
             dens[i].assign(tmp_2); // all inversed
@@ -293,7 +293,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         );
         // public inputs
         PairingsBn254.Fr memory inputs_term = PairingsBn254.new_fr(0);
-        PairingsBn254.Fr memory tmp = PairingsBn254.new_fr(0);
+        PairingsBn254.Fr memory tmp;
         uint256 inputs_len = proof.input_values.length;
         for (uint256 i = 0; i < inputs_len; ++i) {
             tmp.assign(state.cached_lagrange_evals[i]);
@@ -419,7 +419,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_fr1.mul_assign(proof.wire_values_at_z[0]);
 
         PairingsBn254.G1Point memory tmp_g1 = PairingsBn254.P1();
-        PairingsBn254.Fr memory tmp_fr = PairingsBn254.new_fr(0);
+        PairingsBn254.Fr memory tmp_fr;
 
         // v*w0 [q0]
         tmp_g1 = vk.selector_commitments[0].point_mul(tmp_fr1);
