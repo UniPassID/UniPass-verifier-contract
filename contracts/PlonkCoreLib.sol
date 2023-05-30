@@ -111,14 +111,14 @@ library PairingsBn254 {
         }
 
         // check encoding
-        require(x < q_mod);
-        require(y < q_mod);
+        require(x < q_mod, "x-coordinate out of range");
+        require(y < q_mod, "y-coordinate out of range");
         // check on curve
         uint256 lhs = mulmod(y, y, q_mod); // y^2
         uint256 rhs = mulmod(x, x, q_mod); // x^2
         rhs = mulmod(rhs, x, q_mod); // x^3
         rhs = addmod(rhs, bn254_b_coeff, q_mod); // x^3 + b
-        require(lhs == rhs);
+        require(lhs == rhs,"point is not on the curve");
 
         return G1Point(x, y);
     }
