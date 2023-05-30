@@ -396,7 +396,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
      *       + alpha^5 * (  
      *          + alpha * ( w0[zw]*w3[z]*(w2[z] +w0[zw] -w0[z]) -w2[zw] )  
      *         ) *[q_substring_r]
-     *       + alpha^5 * (alpha^2 * L1[z] - 1) *[z_substring]
+     *       + v * alpha^5 * (alpha^2 * L1[z] - 1) *[z_substring]
                 
      */
     function reconstruct_d(
