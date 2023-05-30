@@ -230,7 +230,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_2 = tmp_2.inverse(); // tmp_2 contains a^-1 * b^-1 (with! the last one)
 
         PairingsBn254.Fr memory tmp3 = PairingsBn254.new_fr(0);
-        for (uint256 i = dens_len - 1; i < dens_len; i--) {
+        for (uint256 i = dens_len - 1; ; i--) {
             tmp3.assign(dens[i]);
             dens[i].assign(tmp_2); // all inversed
             dens[i].mul_assign(partial_products[i]); // clear lowest terms
