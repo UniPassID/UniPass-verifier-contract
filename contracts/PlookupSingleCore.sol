@@ -326,7 +326,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp.add_assign(proof.wire_values_at_z[STATE_WIDTH - 1]);
         r_permu.mul_assign(tmp);
 
-        //alpha * L1(z) (reuse var inputs_term)
+        //alpha * L_1(z) (reuse var inputs_term)
         inputs_term.assign(state.cached_lagrange_evals[0]);
         inputs_term.mul_assign(state.alpha);
         r_permu.add_assign(inputs_term);
@@ -376,24 +376,21 @@ contract Plonk4SingleVerifierWithAccessToDNext {
      * [r] = ([q_c] + w_0[q_0] + w_1[q_1] + w_2[q_2] + w_3[q_3] + w_0*w_1[q_m] )
      *       + alpha * ( (w_0(z) + bata * z + gamma)(w_1(z) + K_1 * bata * z + gamma)
      *              *(w_2(z) + k_2 * bata * z + gamma)(w_3(z) + k_3 * bata * z + gamma)
-     *          + alpha * L_0(z) ) * [z]
+     *          + alpha * L_1(z) ) * [z]
      *       - alpha
      *          * (w_0(z) + beta * sigma_0(z) + gamma)
      *          * (w_1(z) + beta * sigma_1(z) + gamma)
      *          * (w_2(z) + beta * sigma_2(z) + gamma)
      *          * beta * z(z*omega) * [sigma_3]
      *       + alpha^3 * (
-                (qlookup(w0+ eta*w1 + ... + eta4*qtable) + gamma1) * (table + beta1*table_zw + gamma1(1+beta1))
-                + alpha * L_0(z)
-                ) *[zlookup]
-             - alpha^3 * (gamma1 * zlookup_zw) * [s]
-
-     *       + alpha^5 * (w2[z]*w3[z] -w0[z]*w1[z]) *[q_substring]
-     *       + alpha^5 * (  
-     *          + alpha * ( w0[zw]*w3[z]*(w2[z] +w0[zw] -w0[z]) -w2[zw] )  
-     *         ) *[q_substring_r]
-     *       + v * alpha^5 * (alpha^2 * L1[z] - 1) *[z_substring]
-                
+     *           (qlookup(z) * (w_0(z) + eta * w_1(z) + ... + eta^4 * q_table(z)) + gamma1)
+     *           * (table(z) + beta1 * table(zw) + gamma1 * (1 + beta1))
+     *           + alpha * L_1(z)
+     *          ) * [zlookup]
+     *       - alpha^3 * (gamma1 * z_lookup(zw)) * [s]
+     *       + alpha^5 * (w_2(z) * w_3(z) - w_0(z) * w_1(z)) * [q_substring]
+     *       + alpha^6 * (w_0(zw) * w_3(z) * (w_2(z) + w_0(zw) - w_0(z)) - w_2(zw)) * [q_substring_r]
+     *       + alpha^5 * (alpha^2 * L_1(z) - 1) * [z_substring]
      */
     function reconstruct_d(
         PartialVerifierState memory state,
@@ -478,7 +475,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_fr1.add_assign(state.gamma);
         grand_product_part_at_z.mul_assign(tmp_fr1);
 
-        // + alpha * L_0(z)
+        // + alpha * L_1(z)
         tmp_fr1.assign(state.cached_lagrange_evals[0]);
         tmp_fr1.mul_assign(state.alpha);
         grand_product_part_at_z.add_assign(tmp_fr1);
@@ -575,7 +572,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         // *
         grand_product_part_at_z.mul_assign(tmp_fr);
 
-        //+ alpha * L_0(z)
+        //+ alpha * L_1(z)
         tmp_fr1.assign(state.cached_lagrange_evals[0]);
         tmp_fr1.mul_assign(state.alpha);
         grand_product_part_at_z.add_assign(tmp_fr1);
@@ -606,7 +603,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         grand_product_part_at_z.mul_assign(tmp_fr);
         tmp_fr.mul_assign(state.alpha);
 
-        // (alpha^2 * L1[z] - 1)
+        // (alpha^2 * L_1(z) - 1)
         tmp_fr1.assign(state.cached_lagrange_evals[0]);
         tmp_fr1.mul_assign(tmp_fr);
         tmp_fr1.sub_assign(one);
@@ -622,7 +619,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         );
         res.point_add_assign(tmp_g1);
 
-        // (alpha^2 * L1[z] - 1) *[z_substring]
+        // (alpha^2 * L_1(z) - 1) *[z_substring]
         // * v*alpha^5
         tmp_fr1.mul_assign(tmp_fr0);
         // * [z_substring]
