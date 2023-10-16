@@ -223,7 +223,7 @@ describe("plonk contract", function () {
         console.log(`[INFO] Setup setupVKHash ... ok`);
       }
       let concat_hash = contractInput.idtokenHash +
-        contractInput.addrHash.substring(2) +
+        contractInput.subHash.substring(2) +
         ethers.utils.sha256(contractInput.headerRawBytes).substring(2) +
         ethers.utils.sha256(contractInput.payloadPubMatch).substring(2);
 
@@ -234,8 +234,8 @@ describe("plonk contract", function () {
         contractInput.headerBase64Len,
         contractInput.payloadLeftIndex,
         contractInput.payloadBase64Len,
-        contractInput.addrLeftIndex,
-        contractInput.addrLen,
+        contractInput.subLeftIndex,
+        contractInput.subLen,
         contractInput.domainSize,
         contractInput.vkData,
         contractInput.publicInputs,

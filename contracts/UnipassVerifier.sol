@@ -222,41 +222,52 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         uint256[] memory public_inputs
     ) public pure returns (bool) {
         require(public_inputs.length == 1, "public inputs error");
-
-        (
-            bytes memory location_id_token_1,
-            bytes memory location_payload_base64
-        ) = bitLocation(
-                public_params.payload_left_index,
-                public_params.payload_base64_len - 1,
-                2048,
-                1536
+        bytes memory sha256_input;
+        {
+            (
+                bytes memory location_id_token_1,
+                bytes memory location_payload_base64
+            ) = bitLocation(
+                    public_params.payload_left_index,
+                    public_params.payload_base64_len,
+                    2048,
+                    1536
+                );
+            sha256_input = abi.encodePacked(
+                public_params.concat_hash,
+                location_id_token_1,
+                location_payload_base64
             );
-
-        (
-            bytes memory location_id_token_2,
-            bytes memory location_header_base64
-        ) = bitLocation(0, public_params.header_base64_len - 1, 2048, 512);
-
-        (
-            bytes memory location_payload_raw,
-            bytes memory location_email_addr
-        ) = bitLocation(
-                public_params.addr_left_index,
-                public_params.addr_len,
-                1152,
-                192
+        }
+        {
+            (
+                bytes memory location_id_token_2,
+                bytes memory location_header_base64
+            ) = bitLocation(0, public_params.header_base64_len, 2048, 512);
+            sha256_input = abi.encodePacked(
+                sha256_input,
+                location_id_token_2,
+                location_header_base64
             );
-
-        bytes memory sha256_input = abi.encodePacked(
-            public_params.concat_hash,
-            location_id_token_1,
-            location_payload_base64,
-            location_id_token_2,
-            location_header_base64,
-            location_payload_raw,
-            location_email_addr
-        );
+        }
+        {
+            (
+                bytes memory location_payload_raw,
+                bytes memory location_email_addr
+            ) = bitLocation(
+                    public_params.addr_left_index,
+                    public_params.addr_len,
+                    1152,
+                    192
+                );
+            sha256_input = abi.encodePacked(
+                sha256_input,
+                location_payload_raw,
+                location_email_addr,
+                uint16(public_params.header_base64_len),
+                uint16(public_params.payload_base64_len)
+            );
+        }
 
         bytes32 hash_result = sha256(sha256_input);
 
