@@ -24,10 +24,6 @@ contract Plonk4SingleVerifierWithAccessToDNext {
      * + alpha^3 * ( zlookup[i]*(qlookup[i]*v[i] +gamma)*(t[i] + beta*t[wi] + (beta+1)*gamma)
      *                - zlookup[wi]*gamma*(s[i] + beta*s[wi] + (beta+1)*gamma)
      *                   + alpha*L1[X]*(zlookup[i] - 1) )
-     * + alpha^5 * ( z_substring[wi] - z_substring[i] + q_substring[i]*(w2[i]*w3[i] -w0[i]*w1[i])
-     *                + alpha * q_substring_r[i]*( w0[wi]*w3[i]*(w2[i] +w0[wi] -w0[i]) -w2[wi] )
-     *                + alpha^2 * z_substring[i] * L1[X]
-     *              )
      * = 0
      */
 
@@ -39,8 +35,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         /// Generator of FFT domain: `omega` ^ `domain_size` = 1.
         PairingsBn254.Fr omega;
         /// commitments for selector polynomials `[q_0]`, `[q_1]`, `[q_2]`, `[q_3]`... , `[q_m]`, `[q_c]`
-        /// , `[q_lookup]`, `[q_table]`, [q_substring], [q_substring_r]
-        PairingsBn254.G1Point[STATE_WIDTH + 2 + 2 + 2] selector_commitments;
+        /// , `[q_lookup]`, `[q_table]`
+        PairingsBn254.G1Point[STATE_WIDTH + 2 + 2] selector_commitments;
         /// commitment for permutation polynomials `[sigma_0]`, `[sigma_1]`, `[sigma_2]`, `[sigma_3]`...
         PairingsBn254.G1Point[STATE_WIDTH] permutation_commitments;
         /// commitment for tables polynomials `[table_0]`, `[table_1]`, `[table_2]`, `[table_3]`, `[table_4]`...
@@ -62,8 +58,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.G1Point grand_product_commitment;
         /// commitment for grand product polynomial `[z_lookup]`
         PairingsBn254.G1Point grand_product_lookup_commitment;
-        /// commitment for grand sum polynomial `[z_substring]`
-        PairingsBn254.G1Point z_substring_commitment;
+        
         /// commitments for quotient polynomial `[t_0]`, `[t_1]`, `[t_2]`, `[t_3]`...
         PairingsBn254.G1Point[STATE_WIDTH] quotient_poly_commitments;
         /// evaluation `t(z)` for the quotient polynomial
@@ -80,8 +75,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.Fr q_table_at_z;
         /// evaluation `table(z)`
         PairingsBn254.Fr table_at_z;
-        /// evaluation `w0(z * omega)`
-        PairingsBn254.Fr wire0_at_z_omega;
+        
         /// evaluation `z(z * omega)` for the grand product polynomial at shifted location
         PairingsBn254.Fr grand_product_at_z_omega;
         /// evaluation `s(z * omega)`
@@ -90,10 +84,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         PairingsBn254.Fr grand_product_lookup_at_z_omega;
         /// evaluation `table(z * omega)`
         PairingsBn254.Fr table_at_z_omega;
-        /// evaluation `w2(z * omega)`
-        PairingsBn254.Fr wire2_at_z_omega;
-        /// evaluation `z_substring(z * omega)`
-        PairingsBn254.Fr z_substring_at_z_omega;
+        
         /// opening proof for all polynomial openings at `z`
         PairingsBn254.G1Point opening_at_z_proof;
         /// opening proof for all polynomial openings at `z * omega`
@@ -267,7 +258,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         require(lhs.value != 0); // we can not check a polynomial relationship if point `z` is in the domain
         lhs.mul_assign(proof.quotient_polynomial_at_z);
 
-        /** rhs = r(z) - pi(z) - (r_permu + r_lookup + r_substring)
+        /** rhs = r(z) - pi(z) - (r_permu + r_lookup )
          *
          *      alpha * (                                   |
          *          (w_0(z) + beta * sigma_0(z) + gamma)    |
@@ -281,9 +272,6 @@ contract Plonk4SingleVerifierWithAccessToDNext {
          *          zlookup(zw) * gamma1                    |
          *              * (beta1 * s(zw) + (beta1+1)gamma1)    |  "r_lookup"
          *          + alpha * L1(z)                         |
-         *      )                                           |
-         *      alpha^5 * (                                 |
-         *          - z_substring(zw)                       |  "r_substring"
          *      )                                           |
          */
 
@@ -358,20 +346,11 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
         rhs.sub_assign(r_permu);
 
-        //alpha^5
-        quotient_challenge.mul_assign(state.alpha);
-        quotient_challenge.mul_assign(state.alpha);
-        // "r_substring" (reuse var)
-        // alpha^5 * z_substring(zw)
-        quotient_challenge.mul_assign(proof.z_substring_at_z_omega);
-
-        rhs.add_assign(quotient_challenge); //over
-
         return lhs.value == rhs.value;
     }
 
     /**
-     * [D] = v[r] + v*u[z] + v2*u[s] + v3*u[zlookup]
+     * [D] = v[r] + u[z] + v*u[s] + v2*u[zlookup]
      * where 
      * [r] = ([q_c] + w_0[q_0] + w_1[q_1] + w_2[q_2] + w_3[q_3] + w_0*w_1[q_m] )
      *       + alpha * ( (w_0(z) + bata * z + gamma)(w_1(z) + K_1 * bata * z + gamma)
@@ -388,9 +367,6 @@ contract Plonk4SingleVerifierWithAccessToDNext {
      *           + alpha * L_1(z)
      *          ) * [zlookup]
      *       - alpha^3 * (gamma1 * z_lookup(zw)) * [s]
-     *       + alpha^5 * (w_2(z) * w_3(z) - w_0(z) * w_1(z)) * [q_substring]
-     *       + alpha^6 * (w_0(zw) * w_3(z) * (w_2(z) + w_0(zw) - w_0(z)) - w_2(zw)) * [q_substring_r]
-     *       + alpha^5 * (alpha^2 * L_1(z) - 1) * [z_substring]
      */
     function reconstruct_d(
         PartialVerifierState memory state,
@@ -486,8 +462,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         out_vu = PairingsBn254.copy(state.u);
         out_vu.mul_assign(state.v);
 
-        // + v*u
-        grand_product_part_at_z.add_assign(out_vu);
+        // + u
+        grand_product_part_at_z.add_assign(state.u);
         // * [z]
         tmp_g1 = proof.grand_product_commitment.point_mul(
             grand_product_part_at_z
@@ -520,22 +496,19 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_fr0.mul_assign(state.alpha);
         tmp_fr0.mul_assign(state.alpha);
 
-        // v2*u
-        out_vu.mul_assign(state.v);
-
         // cal [s] first
         //(gamma * zlookup_zw)
         tmp_fr.assign(proof.grand_product_lookup_at_z_omega);
         tmp_fr.mul_assign(state.gamma_1);
         // * v*alpha^3
         tmp_fr.mul_assign(tmp_fr0);
-        // - v2*u
+        // - v*u
         tmp_fr.sub_assign(out_vu);
         // * [s]
         tmp_g1 = proof.sorted_lookup_commitment.point_mul(tmp_fr);
         res.point_sub_assign(tmp_g1);
 
-        // v3*u
+        // v2*u
         out_vu.mul_assign(state.v);
 
         // combinator eta
@@ -579,63 +552,10 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
         // * v*alpha^3
         grand_product_part_at_z.mul_assign(tmp_fr0);
-        // + v3*u
+        // + v2*u
         grand_product_part_at_z.add_assign(out_vu);
         // * [zlookup]
         tmp_g1 = proof.grand_product_lookup_commitment.point_mul(
-            grand_product_part_at_z
-        );
-        res.point_add_assign(tmp_g1);
-
-        // "substring"
-        // first [q_substring_r] alpha * ( w0[zw]*w3[z]*(w2[z] +w0[zw] -w0[z]) -w2[zw] )
-        // comb alpha
-        tmp_fr.assign(state.alpha);
-        // w2[z] +w0[zw] -w0[z] (reuse var)
-        grand_product_part_at_z.assign(proof.wire_values_at_z[2]);
-        grand_product_part_at_z.add_assign(proof.wire0_at_z_omega);
-        grand_product_part_at_z.sub_assign(proof.wire_values_at_z[0]);
-        // w0[zw]*w3[z]*(w2[z] +w0[zw] -w0[z]) -w2[zw]
-        grand_product_part_at_z.mul_assign(proof.wire_values_at_z[3]);
-        grand_product_part_at_z.mul_assign(proof.wire0_at_z_omega);
-        grand_product_part_at_z.sub_assign(proof.wire2_at_z_omega);
-        // *alpha
-        grand_product_part_at_z.mul_assign(tmp_fr);
-        tmp_fr.mul_assign(state.alpha);
-
-        // (alpha^2 * L_1(z) - 1)
-        tmp_fr1.assign(state.cached_lagrange_evals[0]);
-        tmp_fr1.mul_assign(tmp_fr);
-        tmp_fr1.sub_assign(one);
-
-        // v*alpha^5
-        tmp_fr0.mul_assign(tmp_fr);
-
-        // * v*alpha^5
-        grand_product_part_at_z.mul_assign(tmp_fr0);
-        // * [q_substring_r]
-        tmp_g1 = vk.selector_commitments[STATE_WIDTH + 2 + 2 + 1].point_mul(
-            grand_product_part_at_z
-        );
-        res.point_add_assign(tmp_g1);
-
-        // (alpha^2 * L_1(z) - 1) *[z_substring]
-        // * v*alpha^5
-        tmp_fr1.mul_assign(tmp_fr0);
-        // * [z_substring]
-        tmp_g1 = proof.z_substring_commitment.point_mul(tmp_fr1);
-        res.point_add_assign(tmp_g1);
-
-        // (w2[z]*w3[z] -w0[z]*w1[z]) *[q_substring]
-        grand_product_part_at_z.assign(proof.wire_values_at_z[2]);
-        grand_product_part_at_z.mul_assign(proof.wire_values_at_z[3]);
-        tmp_fr1.assign(proof.wire_values_at_z[0]);
-        tmp_fr1.mul_assign(proof.wire_values_at_z[1]);
-        grand_product_part_at_z.sub_assign(tmp_fr1);
-        // * v*alpha^5
-        grand_product_part_at_z.mul_assign(tmp_fr0);
-        // * [q_substring]
-        tmp_g1 = vk.selector_commitments[STATE_WIDTH + 2 + 2].point_mul(
             grand_product_part_at_z
         );
         res.point_add_assign(tmp_g1);
@@ -671,11 +591,11 @@ contract Plonk4SingleVerifierWithAccessToDNext {
          *      + v^7 * [sigma_0] + v^8 * [sigma_1] + v^9 * [sigma_2] + v^10 * [sigma_3]
          *      + v^11[qtable] + v^12[qlookup]
          *      + v^13 * ([table0] +eta[table1] +eta2[]... +eta4[])
-         *      + u[w_0] + uv[z] + uv2[s] + uv3[zlookup]
-         *      + uv4 * ([table0] +eta[table1] +eta2[]... +eta4[])
-         *      + uv5 * [w_2] + uv6 [z_substring]
+         *      + u[z] + uv[s] + uv2[zlookup]
+         *      + uv3 * ([table0] +eta[table1] +eta2[]... +eta4[])
          */
-        /// [D] = v[r] + v*u[z] + v2*u[s] + v3*u[zlookup] . v3*u
+
+        /// [D] = v[r] + u[z] + v*u[s] + v2*u[zlookup] . v2*u
         (
             PairingsBn254.G1Point memory commitment_aggregation,
             PairingsBn254.Fr memory out_vu
@@ -698,33 +618,9 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             state.v
         );
 
-        /// [F] += (v^2 +u)[w_0] + v^3[w_1] + (v^4 + uv5)[w_2] + v^5[w_3] + v^6[w_4]
+        /// [F] += (v^2)[w_0] + v^3[w_1] + (v^4)[w_2] + v^5[w_3] + v^6[w_4]
         aggregation_challenge.mul_assign(state.v);
-        PairingsBn254.Fr memory tmp_fr0 = PairingsBn254.copy(
-            aggregation_challenge
-        );
-        tmp_fr0.add_assign(state.u);
-        tmp_g1 = proof.wire_commitments[0].point_mul(tmp_fr0);
-        commitment_aggregation.point_add_assign(tmp_g1);
-
-        // (v^4 + uv5)
-        tmp_fr.assign(out_vu);
-        tmp_fr0.assign(aggregation_challenge);
-        tmp_fr.add_assign(tmp_fr0);
-        tmp_fr.mul_assign(tmp_fr0);
-
-        // v^3
-        aggregation_challenge.mul_assign(state.v);
-        tmp_g1 = proof.wire_commitments[1].point_mul(aggregation_challenge);
-        commitment_aggregation.point_add_assign(tmp_g1);
-
-        tmp_g1 = proof.wire_commitments[2].point_mul(tmp_fr);
-        commitment_aggregation.point_add_assign(tmp_g1);
-        tmp_fr.assign(aggregation_challenge);
-
-        // v^5
-        aggregation_challenge.mul_assign(tmp_fr0);
-        for (uint256 i = 3; i < STATE_WIDTH; ++i) {
+        for (uint256 i = 0; i < STATE_WIDTH; ++i) {
             tmp_g1 = proof.wire_commitments[i].point_mul(aggregation_challenge);
             commitment_aggregation.point_add_assign(tmp_g1);
             aggregation_challenge.mul_assign(state.v);
@@ -753,22 +649,19 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         //([table0] +eta[table1] +eta2[]... +eta5[])
         PairingsBn254.G1Point memory tables_comms_combine = PairingsBn254
             .copy_g1(vk.tables_commitments[0]);
-        tmp_fr0.assign(state.eta);
+        PairingsBn254.Fr memory tmp_fr0 = PairingsBn254.copy(
+            state.eta
+        );
         for (uint256 i = 0; i < STATE_WIDTH; ++i) {
             tmp_g1 = vk.tables_commitments[i + 1].point_mul(tmp_fr0);
             tables_comms_combine.point_add_assign(tmp_g1);
 
             tmp_fr0.mul_assign(state.eta);
         }
-        // [F] += (v^13 +uv4) * ([table0] +eta[table1] +eta2[]... +eta5[])
+        // [F] += (v^13 +uv3) * ([table0] +eta[table1] +eta2[]... +eta5[])
         aggregation_challenge.add_assign(out_vu);
         aggregation_challenge.mul_assign(state.v);
         tmp_g1 = tables_comms_combine.point_mul(aggregation_challenge);
-        commitment_aggregation.point_add_assign(tmp_g1);
-
-        // [F] += uv6 [z_substring]
-        tmp_fr.mul_assign(out_vu);
-        tmp_g1 = proof.z_substring_commitment.point_mul(tmp_fr);
         commitment_aggregation.point_add_assign(tmp_g1);
 
         /// Done with [F]. Then compute aggregated value.
@@ -777,9 +670,8 @@ contract Plonk4SingleVerifierWithAccessToDNext {
          *      + v^2 * w_0(z) + v^3 * w_1(z) * v^4 * w_2(z) + v^5 * w_3(z) + v^6 * w_4(z)
          *      + v^7 * sigma_0(z) + v^8 * sigma_1(z) + v^9 * sigma_2(z) + v^10 * sigma_3(z)
          *      + v^11 qtable(z) + v^12 qlookup(z) + v^13 table(z)
-         *      + u* w0(zomega) + u*v z(zomega) + u*v2 s(zomega) + u*v3 zlookup(zomega)
-         *      + u*v4 table(zomega)
-         *      + uv5 * w2(zomega) + uv6 * z_substring(zomega)
+         *      + u z(zomega) + u*v s(zomega) + u*v2 zlookup(zomega)
+         *      + u*v3 table(zomega)
          */
         // collect opening values
         aggregation_challenge.assign(state.v);
@@ -821,13 +713,9 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_fr.mul_assign(aggregation_challenge);
         aggregated_value.add_assign(tmp_fr);
 
-        // + u* w0(zomega) + u*v z(zomega) + u*v2 s(zomega) + u*v3 zlookup(zomega)
+        //  + u z(zomega) + u*v s(zomega) + u*v2 zlookup(zomega)
         aggregation_challenge.assign(state.u);
-        tmp_fr.assign(proof.wire0_at_z_omega);
-        tmp_fr.mul_assign(aggregation_challenge);
-        aggregated_value.add_assign(tmp_fr);
 
-        aggregation_challenge.mul_assign(state.v);
         tmp_fr.assign(proof.grand_product_at_z_omega);
         tmp_fr.mul_assign(aggregation_challenge);
         aggregated_value.add_assign(tmp_fr);
@@ -841,22 +729,12 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         tmp_fr.assign(proof.grand_product_lookup_at_z_omega);
         tmp_fr.mul_assign(aggregation_challenge);
         aggregated_value.add_assign(tmp_fr);
-        // + u*v4 table(zomega)
+        // + u*v3 table(zomega)
         aggregation_challenge.mul_assign(state.v);
         tmp_fr.assign(proof.table_at_z_omega);
         tmp_fr.mul_assign(aggregation_challenge);
         aggregated_value.add_assign(tmp_fr);
 
-        // + uv5 * w2(zomega) + uv6 * z_substring(zomega)
-        aggregation_challenge.mul_assign(state.v);
-        tmp_fr.assign(proof.wire2_at_z_omega);
-        tmp_fr.mul_assign(aggregation_challenge);
-        aggregated_value.add_assign(tmp_fr);
-
-        aggregation_challenge.mul_assign(state.v);
-        tmp_fr.assign(proof.z_substring_at_z_omega);
-        tmp_fr.mul_assign(aggregation_challenge);
-        aggregated_value.add_assign(tmp_fr);
 
         // e(z[Wz] +uzw[Wzw] +[F] -e[1], g2) = e([Wz] +u[Wzw], g2_x)
         commitment_aggregation.point_sub_assign(
@@ -926,7 +804,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
 
         //step 3
         transcript.update_with_g1(proof.grand_product_commitment);
-        transcript.update_with_g1(proof.z_substring_commitment);
+        
         state.beta_1 = transcript.get_challenge();
         state.gamma_1 = transcript.get_challenge();
         transcript.update_with_g1(proof.grand_product_lookup_commitment);
@@ -964,6 +842,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         );
 
         bool valid = verify_at_z(return_zeta_pow_n, state, proof);
+
         if (valid == false) {
             return (false, return_zeta_pow_n);
         }
@@ -982,13 +861,11 @@ contract Plonk4SingleVerifierWithAccessToDNext {
         transcript.update_with_fr(proof.table_at_z);
 
         //add evaluations zw
-        transcript.update_with_fr(proof.wire0_at_z_omega);
+        
         transcript.update_with_fr(proof.grand_product_at_z_omega);
         transcript.update_with_fr(proof.sorted_lookup_at_z_omega);
         transcript.update_with_fr(proof.grand_product_lookup_at_z_omega);
         transcript.update_with_fr(proof.table_at_z_omega);
-        transcript.update_with_fr(proof.wire2_at_z_omega);
-        transcript.update_with_fr(proof.z_substring_at_z_omega);
 
         state.v = transcript.get_challenge();
 
