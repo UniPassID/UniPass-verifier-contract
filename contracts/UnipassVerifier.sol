@@ -19,8 +19,8 @@ struct OpenIdPublicParams {
     uint32 header_base64_len;
     uint32 payload_left_index;
     uint32 payload_base64_len;
-    uint32 addr_left_index;
-    uint32 addr_len;
+    uint32 sub_left_index;
+    uint32 sub_len;
 }
 
 contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
@@ -143,68 +143,19 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         return input_len + padding_count + 8;
     }
 
-    function checkPublicInputs1024(
+    function checkEmailPublicInputs(
         PublicParams memory public_params,
         uint256[] memory public_inputs
     ) public pure returns (bool) {
         require(public_inputs.length == 1, "public inputs error");
 
-        (
-            bytes memory bit_location_a,
-            bytes memory bit_location_b
-        ) = bitLocation(
-                public_params.from_left_index,
-                public_params.from_len,
-                1024,
-                192
-            );
-
         bytes32 hash_result = sha256(
             abi.encodePacked(
                 public_params.header_hash,
                 public_params.addr_hash,
-                bit_location_a,
-                bit_location_b,
                 public_params.pub_match_hash,
-                uint16(sha256PaddingLen(public_params.header_len) / 64),
-                uint16(sha256PaddingLen(public_params.from_len + 32) / 64)
-            )
-        );
-
-        hash_result =
-            hash_result &
-            bytes32(
-                0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-            );
-
-        return hash_result == bytes32(public_inputs[0]);
-    }
-
-    function checkPublicInputs2048(
-        PublicParams memory public_params,
-        uint256[] memory public_inputs
-    ) public pure returns (bool) {
-        require(public_inputs.length == 1, "public inputs error");
-
-        (
-            bytes memory bit_location_a,
-            bytes memory bit_location_b
-        ) = bitLocation(
-                public_params.from_left_index,
-                public_params.from_len,
-                2048,
-                192
-            );
-
-        bytes32 hash_result = sha256(
-            abi.encodePacked(
-                public_params.header_hash,
-                public_params.addr_hash,
-                bit_location_a,
-                bit_location_b,
-                public_params.pub_match_hash,
-                uint16(sha256PaddingLen(public_params.header_len) / 64),
-                uint16(sha256PaddingLen(public_params.from_len + 32) / 64)
+                uint16(public_params.from_left_index),
+                uint16(public_params.from_len)
             )
         );
 
@@ -223,51 +174,16 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     ) public pure returns (bool) {
         require(public_inputs.length == 1, "public inputs error");
         bytes memory sha256_input;
-        {
-            (
-                bytes memory location_id_token_1,
-                bytes memory location_payload_base64
-            ) = bitLocation(
-                    public_params.payload_left_index,
-                    public_params.payload_base64_len,
-                    2048,
-                    1536
-                );
-            sha256_input = abi.encodePacked(
-                public_params.concat_hash,
-                location_id_token_1,
-                location_payload_base64
-            );
-        }
-        {
-            (
-                bytes memory location_id_token_2,
-                bytes memory location_header_base64
-            ) = bitLocation(0, public_params.header_base64_len, 2048, 512);
-            sha256_input = abi.encodePacked(
-                sha256_input,
-                location_id_token_2,
-                location_header_base64
-            );
-        }
-        {
-            (
-                bytes memory location_payload_raw,
-                bytes memory location_email_addr
-            ) = bitLocation(
-                    public_params.addr_left_index,
-                    public_params.addr_len,
-                    1152,
-                    192
-                );
-            sha256_input = abi.encodePacked(
-                sha256_input,
-                location_payload_raw,
-                location_email_addr,
-                uint16(public_params.header_base64_len),
-                uint16(public_params.payload_base64_len)
-            );
-        }
+
+        sha256_input = abi.encodePacked(
+            public_params.concat_hash,
+            uint16(0),
+            uint16(public_params.header_base64_len),
+            uint16(public_params.payload_left_index),
+            uint16(public_params.payload_base64_len),
+            uint16(public_params.sub_left_index),
+            uint16(public_params.sub_len)
+        );
 
         bytes32 hash_result = sha256(sha256_input);
 
@@ -288,29 +204,13 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         bytes memory concat_input;
         // first email
         for (uint256 i = 0; i < 3; ++i) {
-            (
-                bytes memory bit_location_a,
-                bytes memory bit_location_b
-            ) = bitLocation(
-                    public_params[i].from_left_index,
-                    public_params[i].from_len,
-                    2048,
-                    192
-                );
-            bytes32 r = sha256(
-                abi.encodePacked(
-                    public_params[i].header_hash,
-                    public_params[i].addr_hash,
-                    bit_location_a,
-                    bit_location_b
-                )
-            );
             concat_input = abi.encodePacked(
                 concat_input,
-                r,
+                public_params[i].header_hash,
+                public_params[i].addr_hash,
                 public_params[i].pub_match_hash,
-                uint16(sha256PaddingLen(public_params[i].header_len) / 64),
-                uint16(sha256PaddingLen(public_params[i].from_len + 32) / 64)
+                uint16(public_params[i].from_left_index),
+                uint16(public_params[i].from_len)
             );
         }
 
@@ -454,16 +354,6 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
                 }
             }
 
-            // q_substring q_substring_r
-            for (uint256 i = 0; i < 2; ) {
-                vk.selector_commitments[STATE_WIDTH + 2 + 2 + i] = PairingsBn254
-                    .new_g1_checked(vkdata[j], vkdata[j + 1]);
-                j += 2;
-                unchecked {
-                    ++i;
-                }
-            }
-
             uint256[2] memory tmpx;
             uint256[2] memory tmpy;
 
@@ -540,12 +430,7 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             serialized_proof[j + 1]
         );
         j += 2;
-        //z_substring
-        proof.z_substring_commitment = PairingsBn254.new_g1_checked(
-            serialized_proof[j],
-            serialized_proof[j + 1]
-        );
-        j += 2;
+
         //t123...
         for (uint256 i = 0; i < STATE_WIDTH; ) {
             proof.quotient_poly_commitments[i] = PairingsBn254.new_g1_checked(
@@ -598,9 +483,6 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         proof.table_at_z = PairingsBn254.new_fr(serialized_proof[j]);
         j += 1;
 
-        //w0(zw)
-        proof.wire0_at_z_omega = PairingsBn254.new_fr(serialized_proof[j]);
-        j += 1;
         //z(zw)
         proof.grand_product_at_z_omega = PairingsBn254.new_fr(
             serialized_proof[j]
@@ -618,14 +500,6 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         j += 1;
         //table(zw)
         proof.table_at_z_omega = PairingsBn254.new_fr(serialized_proof[j]);
-        j += 1;
-        //w2(zw)
-        proof.wire2_at_z_omega = PairingsBn254.new_fr(serialized_proof[j]);
-        j += 1;
-        //z_substring(zw)
-        proof.z_substring_at_z_omega = PairingsBn254.new_fr(
-            serialized_proof[j]
-        );
         j += 1;
 
         proof.opening_at_z_proof = PairingsBn254.new_g1_checked(

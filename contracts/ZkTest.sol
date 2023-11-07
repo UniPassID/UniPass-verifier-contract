@@ -34,7 +34,7 @@ contract ZkTest {
         public_params.header_len = header_len;
         public_params.from_left_index = from_left_index;
         public_params.from_len = from_len;
-        bool matched = verifier.checkPublicInputs1024(
+        bool matched = verifier.checkEmailPublicInputs(
             public_params,
             public_inputs
         );
@@ -59,8 +59,8 @@ contract ZkTest {
         uint32 header_base64_len,
         uint32 payload_left_index,
         uint32 payload_base64_len,
-        uint32 addr_left_index,
-        uint32 addr_len,
+        uint32 sub_left_index,
+        uint32 sub_len,
         uint128 domain_size,
         uint256[] memory vkdata,
         uint256[] calldata public_inputs,
@@ -71,8 +71,8 @@ contract ZkTest {
         public_params.header_base64_len = header_base64_len;
         public_params.payload_left_index = payload_left_index;
         public_params.payload_base64_len = payload_base64_len;
-        public_params.addr_left_index = addr_left_index;
-        public_params.addr_len = addr_len;
+        public_params.sub_left_index = sub_left_index;
+        public_params.sub_len = sub_len;
         bool matched = verifier.checkPublicInputsOpenId(
             public_params,
             public_inputs
@@ -111,7 +111,7 @@ contract ZkTest {
         public_params.header_len = header_len;
         public_params.from_left_index = from_left_index;
         public_params.from_len = from_len;
-        bool matched = verifier.checkPublicInputs2048(
+        bool matched = verifier.checkEmailPublicInputs(
             public_params,
             public_inputs
         );
